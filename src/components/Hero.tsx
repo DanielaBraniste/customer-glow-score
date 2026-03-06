@@ -32,8 +32,10 @@ const Hero = () => (
           <Button variant="hero" size="lg" className="h-12 px-8">
             Start Free Trial <ArrowRight className="ml-1 h-4 w-4" />
           </Button>
-          <Button variant="heroOutline" size="lg" className="h-12 px-8">
-            Book a Demo
+          <Button asChild variant="heroOutline" size="lg" className="h-12 px-8">
+            <a href="https://calendar.google.com/appointments/schedules/AcZssZ2tBT5NYypWaK5wf9lE_qTonRFPjcazbqADCR4NlmVyhaa6zn22cz6SHTRO8GP5XQPT-09cWxF5" target="_blank" rel="noopener noreferrer">
+              Book a Demo
+            </a>
           </Button>
         </div>
       </motion.div>
