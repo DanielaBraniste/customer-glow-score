@@ -1,9 +1,9 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useMemo } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Upload, Building2, Plus, X, FileSpreadsheet, ArrowLeft } from "lucide-react";
+import { Upload, Building2, Plus, X, FileSpreadsheet, ArrowLeft, ToggleLeft, ToggleRight } from "lucide-react";
 import { toast } from "sonner";
 
 interface CustomField {
@@ -21,41 +21,51 @@ interface AddCompanyDialogProps {
 
 type Mode = "choose" | "manual" | "upload";
 
-const DEFAULT_SCORED_FIXED = 2; // industry + last_login (name, email, mrr excluded)
-
-const calcDefaultWeight = (customCount: number) =>
-  Math.round((100 / (DEFAULT_SCORED_FIXED + Math.max(customCount, 1))) * 10) / 10;
+const calcDefaultWeight = (scoredCount: number) =>
+  Math.round((100 / Math.max(scoredCount, 1)) * 10) / 10;
 
 const AddCompanyDialog = ({ open, onOpenChange, onAddCompany, onUploadCSV }: AddCompanyDialogProps) => {
   const [mode, setMode] = useState<Mode>("choose");
   const [name, setName] = useState("");
+  const initWeight = calcDefaultWeight(4); // industry + mrr + last_login + 1 custom
   const [industry, setIndustry] = useState("");
-  const [industryWeight, setIndustryWeight] = useState(calcDefaultWeight(1));
+  const [industryScored, setIndustryScored] = useState(true);
+  const [industryWeight, setIndustryWeight] = useState(initWeight);
   const [email, setEmail] = useState("");
   const [mrr, setMrr] = useState("");
+  const [mrrScored, setMrrScored] = useState(true);
+  const [mrrWeight, setMrrWeight] = useState(initWeight);
   const [lastLogin, setLastLogin] = useState("");
-  const [lastLoginWeight, setLastLoginWeight] = useState(calcDefaultWeight(1));
-  const [customFields, setCustomFields] = useState<CustomField[]>([{ key: "", value: "", weight: calcDefaultWeight(1) }]);
+  const [lastLoginWeight, setLastLoginWeight] = useState(initWeight);
+  const [customFields, setCustomFields] = useState<CustomField[]>([{ key: "", value: "", weight: initWeight }]);
   const [dragOver, setDragOver] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const redistributeWeights = (newCustomCount: number) => {
-    const w = calcDefaultWeight(newCustomCount);
-    setIndustryWeight(w);
+  // Count scored fixed attributes
+  const scoredFixedCount = 1 + (industryScored ? 1 : 0) + (mrrScored ? 1 : 0); // last_login always scored
+
+  const redistributeWeights = useCallback((customCount: number, indScored: boolean, mScored: boolean) => {
+    const total = 1 + (indScored ? 1 : 0) + (mScored ? 1 : 0) + customCount; // 1 = last_login
+    const w = calcDefaultWeight(total);
+    if (indScored) setIndustryWeight(w); else setIndustryWeight(0);
+    if (mScored) setMrrWeight(w); else setMrrWeight(0);
     setLastLoginWeight(w);
     return w;
-  };
+  }, []);
 
   const reset = () => {
     setMode("choose");
     setName("");
     setIndustry("");
+    setIndustryScored(true);
+    setMrrScored(true);
     setEmail("");
     setMrr("");
     setLastLogin("");
-    const w = calcDefaultWeight(1);
+    const w = calcDefaultWeight(4); // last_login + industry + mrr + 1 custom
     setIndustryWeight(w);
+    setMrrWeight(w);
     setLastLoginWeight(w);
     setCustomFields([{ key: "", value: "", weight: w }]);
     setSelectedFile(null);
@@ -69,14 +79,14 @@ const AddCompanyDialog = ({ open, onOpenChange, onAddCompany, onUploadCSV }: Add
 
   const addField = () => {
     const newFields = [...customFields, { key: "", value: "", weight: 0 }];
-    const w = redistributeWeights(newFields.length);
+    const w = redistributeWeights(newFields.length, industryScored, mrrScored);
     setCustomFields(newFields.map((f) => ({ ...f, weight: w })));
   };
 
   const removeField = (idx: number) => {
     if (customFields.length <= 1) return;
     const newFields = customFields.filter((_, i) => i !== idx);
-    const w = redistributeWeights(newFields.length);
+    const w = redistributeWeights(newFields.length, industryScored, mrrScored);
     setCustomFields(newFields.map((f) => ({ ...f, weight: w })));
   };
 
@@ -192,31 +202,60 @@ const AddCompanyDialog = ({ open, onOpenChange, onAddCompany, onUploadCSV }: Add
                   <Input id="email" type="email" placeholder="contact@acme.com" value={email} onChange={(e) => setEmail(e.target.value)} />
                 </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="mrr">MRR ($)</Label>
-                <Input id="mrr" type="number" placeholder="12000" value={mrr} onChange={(e) => setMrr(e.target.value)} />
-              </div>
 
               {/* Scored default attributes with weight */}
               <div className="space-y-3">
                 <Label className="text-muted-foreground text-xs uppercase tracking-wider">Scored Attributes</Label>
                 <div className="flex items-center gap-2 text-xs text-muted-foreground px-1">
+                  <span className="w-6" />
                   <span className="flex-1">Attribute</span>
                   <span className="flex-1">Value</span>
                   <span className="w-20 text-center">Weight</span>
-                  <span className="w-6" />
                 </div>
+                {/* Industry */}
                 <div className="flex items-center gap-2">
-                  <Input value="Industry" disabled className="flex-1 opacity-60" />
-                  <Input placeholder="SaaS" value={industry} onChange={(e) => setIndustry(e.target.value)} className="flex-1" />
-                  <Input type="number" min={0} value={industryWeight} onChange={(e) => setIndustryWeight(Number(e.target.value) || 0)} className="w-20 text-center" />
-                  <span className="w-6" />
+                  <button
+                    onClick={() => {
+                      const next = !industryScored;
+                      setIndustryScored(next);
+                      const w = redistributeWeights(customFields.length, next, mrrScored);
+                      setCustomFields(customFields.map((f) => ({ ...f, weight: w })));
+                    }}
+                    className="text-muted-foreground hover:text-foreground transition-colors"
+                    title={industryScored ? "Disable scoring" : "Enable scoring"}
+                  >
+                    {industryScored ? <ToggleRight className="h-5 w-5 text-primary" /> : <ToggleLeft className="h-5 w-5" />}
+                  </button>
+                  <Input value="Industry" disabled className={`flex-1 ${industryScored ? "opacity-60" : "opacity-30"}`} />
+                  <Input placeholder="SaaS" value={industry} onChange={(e) => setIndustry(e.target.value)} className="flex-1" disabled={!industryScored} />
+                  <Input type="number" min={0} value={industryWeight} onChange={(e) => setIndustryWeight(Number(e.target.value) || 0)} className="w-20 text-center" disabled={!industryScored} />
                 </div>
+                {/* MRR */}
                 <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => {
+                      const next = !mrrScored;
+                      setMrrScored(next);
+                      const w = redistributeWeights(customFields.length, industryScored, next);
+                      setCustomFields(customFields.map((f) => ({ ...f, weight: w })));
+                    }}
+                    className="text-muted-foreground hover:text-foreground transition-colors"
+                    title={mrrScored ? "Disable scoring" : "Enable scoring"}
+                  >
+                    {mrrScored ? <ToggleRight className="h-5 w-5 text-primary" /> : <ToggleLeft className="h-5 w-5" />}
+                  </button>
+                  <Input value="MRR ($)" disabled className={`flex-1 ${mrrScored ? "opacity-60" : "opacity-30"}`} />
+                  <Input type="number" placeholder="12000" value={mrr} onChange={(e) => setMrr(e.target.value)} className="flex-1" />
+                  <Input type="number" min={0} value={mrrWeight} onChange={(e) => setMrrWeight(Number(e.target.value) || 0)} className="w-20 text-center" disabled={!mrrScored} />
+                </div>
+                {/* Last Login */}
+                <div className="flex items-center gap-2">
+                  <span className="w-6 flex items-center justify-center">
+                    <ToggleRight className="h-5 w-5 text-primary opacity-50" />
+                  </span>
                   <Input value="Last Login" disabled className="flex-1 opacity-60" />
                   <Input type="date" value={lastLogin} onChange={(e) => setLastLogin(e.target.value)} className="flex-1" />
                   <Input type="number" min={0} value={lastLoginWeight} onChange={(e) => setLastLoginWeight(Number(e.target.value) || 0)} className="w-20 text-center" />
-                  <span className="w-6" />
                 </div>
               </div>
 
