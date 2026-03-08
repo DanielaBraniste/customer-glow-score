@@ -14,7 +14,45 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      profiles: {
+        Row: {
+          company: string | null
+          created_at: string
+          email_notifications: boolean
+          id: string
+          notification_frequency: Database["public"]["Enums"]["notification_frequency"]
+          plan: Database["public"]["Enums"]["plan_tier"]
+          slack_notifications: boolean
+          updated_at: string
+          user_id: string
+          username: string | null
+        }
+        Insert: {
+          company?: string | null
+          created_at?: string
+          email_notifications?: boolean
+          id?: string
+          notification_frequency?: Database["public"]["Enums"]["notification_frequency"]
+          plan?: Database["public"]["Enums"]["plan_tier"]
+          slack_notifications?: boolean
+          updated_at?: string
+          user_id: string
+          username?: string | null
+        }
+        Update: {
+          company?: string | null
+          created_at?: string
+          email_notifications?: boolean
+          id?: string
+          notification_frequency?: Database["public"]["Enums"]["notification_frequency"]
+          plan?: Database["public"]["Enums"]["plan_tier"]
+          slack_notifications?: boolean
+          updated_at?: string
+          user_id?: string
+          username?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -23,7 +61,13 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      notification_frequency:
+        | "daily"
+        | "weekly"
+        | "biweekly"
+        | "monthly"
+        | "quarterly"
+      plan_tier: "free" | "starter" | "medium" | "premium"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +194,15 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      notification_frequency: [
+        "daily",
+        "weekly",
+        "biweekly",
+        "monthly",
+        "quarterly",
+      ],
+      plan_tier: ["free", "starter", "medium", "premium"],
+    },
   },
 } as const
