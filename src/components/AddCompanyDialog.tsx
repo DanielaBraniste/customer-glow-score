@@ -9,6 +9,7 @@ import { toast } from "sonner";
 interface CustomField {
   key: string;
   value: string;
+  weight: number;
 }
 
 interface AddCompanyDialogProps {
@@ -24,7 +25,10 @@ const AddCompanyDialog = ({ open, onOpenChange, onAddCompany, onUploadCSV }: Add
   const [mode, setMode] = useState<Mode>("choose");
   const [name, setName] = useState("");
   const [industry, setIndustry] = useState("");
-  const [customFields, setCustomFields] = useState<CustomField[]>([{ key: "", value: "" }]);
+  const [email, setEmail] = useState("");
+  const [mrr, setMrr] = useState("");
+  const [lastLogin, setLastLogin] = useState("");
+  const [customFields, setCustomFields] = useState<CustomField[]>([{ key: "", value: "", weight: 1 }]);
   const [dragOver, setDragOver] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -33,7 +37,10 @@ const AddCompanyDialog = ({ open, onOpenChange, onAddCompany, onUploadCSV }: Add
     setMode("choose");
     setName("");
     setIndustry("");
-    setCustomFields([{ key: "", value: "" }]);
+    setEmail("");
+    setMrr("");
+    setLastLogin("");
+    setCustomFields([{ key: "", value: "", weight: 1 }]);
     setSelectedFile(null);
     setDragOver(false);
   };
@@ -43,16 +50,20 @@ const AddCompanyDialog = ({ open, onOpenChange, onAddCompany, onUploadCSV }: Add
     onOpenChange(val);
   };
 
-  const addField = () => setCustomFields([...customFields, { key: "", value: "" }]);
+  const addField = () => setCustomFields([...customFields, { key: "", value: "", weight: 1 }]);
 
   const removeField = (idx: number) => {
     if (customFields.length <= 1) return;
     setCustomFields(customFields.filter((_, i) => i !== idx));
   };
 
-  const updateField = (idx: number, prop: "key" | "value", val: string) => {
+  const updateField = (idx: number, prop: "key" | "value" | "weight", val: string) => {
     const updated = [...customFields];
-    updated[idx][prop] = val;
+    if (prop === "weight") {
+      updated[idx].weight = Number(val) || 0;
+    } else {
+      updated[idx][prop] = val;
+    }
     setCustomFields(updated);
   };
 
@@ -147,6 +158,7 @@ const AddCompanyDialog = ({ open, onOpenChange, onAddCompany, onUploadCSV }: Add
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 mt-2 max-h-[60vh] overflow-y-auto pr-1">
+              {/* Default fields */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="company-name">Company Name *</Label>
@@ -157,13 +169,34 @@ const AddCompanyDialog = ({ open, onOpenChange, onAddCompany, onUploadCSV }: Add
                   <Input id="industry" placeholder="SaaS" value={industry} onChange={(e) => setIndustry(e.target.value)} />
                 </div>
               </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="email">Main Email</Label>
+                  <Input id="email" type="email" placeholder="contact@acme.com" value={email} onChange={(e) => setEmail(e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="mrr">MRR ($)</Label>
+                  <Input id="mrr" type="number" placeholder="12000" value={mrr} onChange={(e) => setMrr(e.target.value)} />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="last-login">Last Login</Label>
+                <Input id="last-login" type="date" value={lastLogin} onChange={(e) => setLastLogin(e.target.value)} />
+              </div>
 
+              {/* Custom attributes with weight */}
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <Label>Custom Attributes</Label>
                   <button onClick={addField} className="flex items-center gap-1 text-xs text-primary hover:underline">
                     <Plus className="h-3 w-3" /> Add field
                   </button>
+                </div>
+                <div className="flex items-center gap-2 text-xs text-muted-foreground px-1">
+                  <span className="flex-1">Attribute</span>
+                  <span className="flex-1">Value</span>
+                  <span className="w-20 text-center">Weight</span>
+                  <span className="w-6" />
                 </div>
                 {customFields.map((field, idx) => (
                   <div key={idx} className="flex items-center gap-2">
@@ -179,6 +212,15 @@ const AddCompanyDialog = ({ open, onOpenChange, onAddCompany, onUploadCSV }: Add
                       onChange={(e) => updateField(idx, "value", e.target.value)}
                       className="flex-1"
                     />
+                    <Input
+                      type="number"
+                      min={0}
+                      max={10}
+                      placeholder="1"
+                      value={field.weight}
+                      onChange={(e) => updateField(idx, "weight", e.target.value)}
+                      className="w-20 text-center"
+                    />
                     <button
                       onClick={() => removeField(idx)}
                       className="text-muted-foreground hover:text-destructive transition-colors p-1"
@@ -189,7 +231,7 @@ const AddCompanyDialog = ({ open, onOpenChange, onAddCompany, onUploadCSV }: Add
                   </div>
                 ))}
                 <p className="text-xs text-muted-foreground">
-                  e.g. MRR, Contract End Date, NPS Score, Support Tickets
+                  Weight determines how much each attribute influences the health score (0–10).
                 </p>
               </div>
             </div>
