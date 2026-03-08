@@ -56,7 +56,13 @@ const allDates = [...new Set(mockRawData.map((r) => r.date))].sort().reverse();
 const allSources = [...new Set(mockRawData.map((r) => r.source))].sort();
 
 const getValueColor = (key: string, val: number) => {
-  if (key === "nps" || key === "usageScore") {
+  if (key === "nps") {
+    // NPS range: -100 to 100. >50 great, 0–50 ok, <0 bad
+    if (val > 50) return "text-primary";
+    if (val >= 0) return "text-yellow-400";
+    return "text-destructive";
+  }
+  if (key === "usageScore") {
     if (val >= 80) return "text-primary";
     if (val >= 50) return "text-yellow-400";
     return "text-destructive";
