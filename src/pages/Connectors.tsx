@@ -1,6 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { ArrowLeft, ExternalLink, Zap } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
@@ -107,13 +108,27 @@ const Connectors = () => {
           </div>
         ))}
 
-        <div className="rounded-xl border border-dashed border-border bg-card/50 p-8 text-center">
-          <p className="text-muted-foreground text-sm mb-1">Don't see your tool?</p>
-          <p className="text-xs text-muted-foreground">
-            We're adding new integrations regularly. You can also{" "}
-            <button className="text-primary hover:underline">upload a CSV</button>{" "}
+        <div className="rounded-xl border border-dashed border-border bg-card/50 p-8 text-center space-y-4">
+          <p className="text-muted-foreground text-sm font-medium">Don't see your tool?</p>
+          <p className="text-xs text-muted-foreground max-w-md mx-auto">
+            Request a connector and we'll prioritize building it. You can also{" "}
+            <button className="text-primary hover:underline" onClick={() => navigate("/dashboard")}>upload a CSV</button>{" "}
             with your customer data in the meantime.
           </p>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              const input = (e.target as HTMLFormElement).elements.namedItem("connector-request") as HTMLInputElement;
+              if (input.value.trim()) {
+                toast.success(`Thanks! We've noted your request for "${input.value.trim()}".`);
+                input.value = "";
+              }
+            }}
+            className="flex items-center gap-2 max-w-sm mx-auto"
+          >
+            <Input name="connector-request" placeholder="e.g. Freshdesk, Mixpanel..." className="text-sm" />
+            <Button variant="hero" size="sm" type="submit">Request</Button>
+          </form>
         </div>
       </div>
     </div>
