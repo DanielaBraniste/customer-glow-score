@@ -17,7 +17,7 @@ const CTA = () => (
         <span className="text-gradient">Start scoring.</span>
       </h2>
       <p className="text-muted-foreground text-lg mb-10 max-w-xl mx-auto">
-        Join 200+ SaaS companies using Desi to retain more customers and grow faster.
+        Be among the first SaaS teams to predict churn before it happens — join the public beta today.
       </p>
       <Button asChild variant="hero" size="lg" className="h-12 px-8">
         <Link to="/trial">Get Started Free <ArrowRight className="ml-1 h-4 w-4" /></Link>
