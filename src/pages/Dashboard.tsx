@@ -53,6 +53,17 @@ const Dashboard = () => {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
+  const [addDialogOpen, setAddDialogOpen] = useState(false);
+
+  const handleAddCompany = (company: { name: string; industry: string; fields: { key: string; value: string }[] }) => {
+    console.log("Add company:", company);
+    // TODO: persist to database
+  };
+
+  const handleUploadCSV = (file: File) => {
+    console.log("Upload CSV:", file.name);
+    // TODO: parse and persist
+  };
 
   const handleSignOut = async () => {
     await signOut();
