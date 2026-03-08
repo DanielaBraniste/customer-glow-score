@@ -13,17 +13,32 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import AddCompanyDialog from "@/components/AddCompanyDialog";
+import { calculateHealthScore, DEFAULT_SCORE_FIELDS } from "@/lib/healthScore";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
-const mockCompanies = [
-  { id: 1, name: "Acme Corp", industry: "SaaS", healthScore: 87, trend: "up", lastUpdate: "2 hours ago", status: "Healthy" },
-  { id: 2, name: "Globex Inc", industry: "Fintech", healthScore: 64, trend: "down", lastUpdate: "5 hours ago", status: "At Risk" },
-  { id: 3, name: "Initech", industry: "Enterprise", healthScore: 92, trend: "up", lastUpdate: "1 hour ago", status: "Healthy" },
-  { id: 4, name: "Umbrella Co", industry: "Healthcare", healthScore: 45, trend: "down", lastUpdate: "3 hours ago", status: "Critical" },
-  { id: 5, name: "Stark Industries", industry: "Manufacturing", healthScore: 78, trend: "stable", lastUpdate: "30 min ago", status: "Healthy" },
-  { id: 6, name: "Wayne Enterprises", industry: "Conglomerate", healthScore: 71, trend: "stable", lastUpdate: "4 hours ago", status: "Monitor" },
+// Raw data per company (latest snapshot) — will come from DB later
+const companyRawData = [
+  { id: 1, name: "Acme Corp", industry: "SaaS", mrr: 12000, nps: 72, lastLogin: "2026-03-07", supportTickets: 2, contractEnd: "2026-12-01", usageScore: 88 },
+  { id: 2, name: "Globex Inc", industry: "Fintech", mrr: 8500, nps: 45, lastLogin: "2026-02-20", supportTickets: 8, contractEnd: "2026-06-15", usageScore: 52 },
+  { id: 3, name: "Initech", industry: "Enterprise", mrr: 24000, nps: 91, lastLogin: "2026-03-08", supportTickets: 0, contractEnd: "2027-03-01", usageScore: 95 },
+  { id: 4, name: "Umbrella Co", industry: "Healthcare", mrr: 5200, nps: 28, lastLogin: "2026-01-15", supportTickets: 14, contractEnd: "2026-04-01", usageScore: 31 },
+  { id: 5, name: "Stark Industries", industry: "Manufacturing", mrr: 18000, nps: 67, lastLogin: "2026-03-07", supportTickets: 3, contractEnd: "2026-09-15", usageScore: 76 },
+  { id: 6, name: "Wayne Enterprises", industry: "Conglomerate", mrr: 15000, nps: 58, lastLogin: "2026-03-05", supportTickets: 5, contractEnd: "2026-11-01", usageScore: 69 },
 ];
+
+const getStatus = (score: number) => {
+  if (score >= 80) return "Healthy";
+  if (score >= 60) return "Monitor";
+  if (score >= 40) return "At Risk";
+  return "Critical";
+};
 
 const getTrendIcon = (trend: string) => {
   if (trend === "up") return <TrendingUp className="h-4 w-4 text-primary" />;
