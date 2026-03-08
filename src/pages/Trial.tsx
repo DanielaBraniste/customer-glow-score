@@ -5,19 +5,62 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Check, ArrowRight, ArrowLeft } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 
-const perks = [
-  "Track up to 30 companies free",
-  "3 integrations included",
-  "Weekly health score updates",
-  "No credit card required",
-  "Cancel anytime",
-];
+const planDetails: Record<string, {
+  title: string;
+  subtitle: string;
+  badge: string;
+  perks: string[];
+}> = {
+  free: {
+    title: "free plan",
+    subtitle: "Get instant visibility into customer health with zero commitment.",
+    badge: "Free forever",
+    perks: [
+      "Track up to 30 companies",
+      "3 connections included",
+      "Weekly health score updates",
+      "Basic dashboards",
+      "No credit card required",
+    ],
+  },
+  starter: {
+    title: "Starter trial",
+    subtitle: "Unlock daily updates and more connections for growing teams.",
+    badge: "14-day free trial",
+    perks: [
+      "Track up to 100 companies",
+      "7 connectors included",
+      "Daily health score updates",
+      "Advanced health scores",
+      "Priority email support",
+      "No credit card required",
+    ],
+  },
+  medium: {
+    title: "Medium trial",
+    subtitle: "Scale your customer success with powerful dashboards and alerts.",
+    badge: "14-day free trial",
+    perks: [
+      "Track up to 250 companies",
+      "10 connectors included",
+      "Daily health score updates",
+      "Custom dashboards",
+      "Slack & email alerts",
+      "Dedicated support",
+      "No credit card required",
+    ],
+  },
+};
 
 const Trial = () => {
+  const [searchParams] = useSearchParams();
+  const planKey = searchParams.get("plan") || "free";
+  const plan = planDetails[planKey] || planDetails.free;
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
@@ -71,15 +114,19 @@ const Trial = () => {
             <span className="font-bold text-xl">Desi</span>
           </div>
 
+          <div className="inline-flex items-center rounded-full border border-primary/20 bg-primary/5 px-3 py-1 mb-6">
+            <span className="text-xs font-medium text-primary">{plan.badge}</span>
+          </div>
+
           <h1 className="text-4xl font-extrabold tracking-tight mb-4">
-            Start your <span className="text-gradient">free trial</span>
+            Start your <span className="text-gradient">{plan.title}</span>
           </h1>
           <p className="text-muted-foreground text-lg mb-10 leading-relaxed">
-            Get instant visibility into customer health. Set up in minutes, no engineering required.
+            {plan.subtitle}
           </p>
 
           <ul className="space-y-4">
-            {perks.map((perk, i) => (
+            {plan.perks.map((perk, i) => (
               <motion.li
                 key={perk}
                 initial={{ opacity: 0, x: -16 }}
@@ -120,7 +167,11 @@ const Trial = () => {
                 <span className="font-bold text-lg">Desi</span>
               </div>
               <CardTitle className="text-2xl">Create your account</CardTitle>
-              <CardDescription>Start your 14-day free trial — no credit card needed</CardDescription>
+              <CardDescription>
+                {planKey === "free"
+                  ? "Get started for free — no credit card needed"
+                  : "Start your 14-day free trial — no credit card needed"}
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <form onSubmit={handleSubmit} className="space-y-4">
@@ -172,7 +223,7 @@ const Trial = () => {
                   className="w-full h-11 mt-2"
                   disabled={loading}
                 >
-                  {loading ? "Creating account…" : "Start Free Trial"}
+                  {loading ? "Creating account…" : planKey === "free" ? "Get Started Free" : "Start Free Trial"}
                   {!loading && <ArrowRight className="ml-1 h-4 w-4" />}
                 </Button>
               </form>
