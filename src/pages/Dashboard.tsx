@@ -72,14 +72,30 @@ const Dashboard = () => {
   const [search, setSearch] = useState("");
   const [addDialogOpen, setAddDialogOpen] = useState(false);
 
+  // Use a fixed "today" matching mock data dates so scores are meaningful
+  const today = useMemo(() => new Date("2026-03-08"), []);
+
+  const companies = useMemo(() => {
+    return companyRawData.map((c) => {
+      const result = calculateHealthScore(c, DEFAULT_SCORE_FIELDS, today);
+      return {
+        ...c,
+        healthScore: result.total,
+        breakdown: result.breakdown,
+        status: getStatus(result.total),
+      };
+    });
+  }, [today]);
+
+  const avgScore = Math.round(companies.reduce((s, c) => s + c.healthScore, 0) / companies.length);
+  const atRiskCount = companies.filter((c) => c.healthScore < 60).length;
+
   const handleAddCompany = (company: { name: string; industry: string; fields: { key: string; value: string }[] }) => {
     console.log("Add company:", company);
-    // TODO: persist to database
   };
 
   const handleUploadCSV = (file: File) => {
     console.log("Upload CSV:", file.name);
-    // TODO: parse and persist
   };
 
   const handleSignOut = async () => {
@@ -87,117 +103,132 @@ const Dashboard = () => {
     navigate("/");
   };
 
-  const filtered = mockCompanies.filter((c) =>
+  const filtered = companies.filter((c) =>
     c.name.toLowerCase().includes(search.toLowerCase())
   );
 
   return (
-    <div className="min-h-screen bg-background pt-20 px-6">
-      <div className="max-w-6xl mx-auto">
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center gap-4">
-            <UserProfile />
-            <div>
-              <h1 className="text-2xl font-bold">Dashboard</h1>
-              <p className="text-muted-foreground text-sm">Welcome, {user?.email}</p>
-            </div>
-          </div>
-          <Button variant="heroOutline" size="sm" onClick={handleSignOut}>
-            <LogOut className="h-4 w-4 mr-2" /> Sign Out
-          </Button>
-        </div>
-
-        {/* Stats row */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-          {[
-            { label: "Companies", value: "6", icon: Building2 },
-            { label: "Avg Score", value: "73", icon: TrendingUp },
-            { label: "At Risk", value: "2", icon: TrendingDown },
-            { label: "Connections", value: "3", icon: Plus },
-          ].map((stat) => (
-            <div key={stat.label} className="rounded-xl border border-border bg-card p-4">
-              <div className="flex items-center gap-2 text-muted-foreground text-sm mb-1">
-                <stat.icon className="h-4 w-4" />
-                {stat.label}
+    <TooltipProvider>
+      <div className="min-h-screen bg-background pt-20 px-6">
+        <div className="max-w-6xl mx-auto">
+          <div className="flex items-center justify-between mb-8">
+            <div className="flex items-center gap-4">
+              <UserProfile />
+              <div>
+                <h1 className="text-2xl font-bold">Dashboard</h1>
+                <p className="text-muted-foreground text-sm">Welcome, {user?.email}</p>
               </div>
-              <p className="text-2xl font-bold">{stat.value}</p>
             </div>
-          ))}
-        </div>
-
-        {/* Toolbar */}
-        <div className="flex items-center justify-between mb-4">
-          <div className="relative w-64">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search companies..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="pl-10"
-            />
-          </div>
-          <div className="flex items-center gap-3">
-            <Button variant="heroOutline" size="sm" onClick={() => navigate("/raw-data")}>
-              <Database className="h-4 w-4 mr-2" /> Raw Data
-            </Button>
-            <Button variant="heroOutline" size="sm" onClick={() => navigate("/connectors")}>
-              <Zap className="h-4 w-4 mr-2" /> Automated Import
-            </Button>
-            <Button variant="hero" size="sm" onClick={() => setAddDialogOpen(true)}>
-              <Plus className="h-4 w-4 mr-2" /> Add Company
+            <Button variant="heroOutline" size="sm" onClick={handleSignOut}>
+              <LogOut className="h-4 w-4 mr-2" /> Sign Out
             </Button>
           </div>
-        </div>
 
-        <AddCompanyDialog
-          open={addDialogOpen}
-          onOpenChange={setAddDialogOpen}
-          onAddCompany={handleAddCompany}
-          onUploadCSV={handleUploadCSV}
-        />
+          {/* Stats row */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+            {[
+              { label: "Companies", value: String(companies.length), icon: Building2 },
+              { label: "Avg Score", value: String(avgScore), icon: TrendingUp },
+              { label: "At Risk", value: String(atRiskCount), icon: TrendingDown },
+              { label: "Connections", value: "3", icon: Plus },
+            ].map((stat) => (
+              <div key={stat.label} className="rounded-xl border border-border bg-card p-4">
+                <div className="flex items-center gap-2 text-muted-foreground text-sm mb-1">
+                  <stat.icon className="h-4 w-4" />
+                  {stat.label}
+                </div>
+                <p className="text-2xl font-bold">{stat.value}</p>
+              </div>
+            ))}
+          </div>
 
-        {/* Table */}
-        <div className="rounded-xl border border-border bg-card overflow-hidden">
-          <Table>
-            <TableHeader>
-              <TableRow className="hover:bg-transparent">
-                <TableHead>Company</TableHead>
-                <TableHead>Industry</TableHead>
-                <TableHead>Health Score</TableHead>
-                <TableHead>Trend</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Last Update</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filtered.map((company) => (
-                <TableRow key={company.id} className="cursor-pointer">
-                  <TableCell className="font-medium">{company.name}</TableCell>
-                  <TableCell className="text-muted-foreground">{company.industry}</TableCell>
-                  <TableCell>
-                    <span className={`font-semibold ${getScoreColor(company.healthScore)}`}>
-                      {company.healthScore}
-                    </span>
-                  </TableCell>
-                  <TableCell>{getTrendIcon(company.trend)}</TableCell>
-                  <TableCell>{getStatusBadge(company.status)}</TableCell>
-                  <TableCell className="text-right text-muted-foreground text-sm">
-                    {company.lastUpdate}
-                  </TableCell>
+          {/* Toolbar */}
+          <div className="flex items-center justify-between mb-4">
+            <div className="relative w-64">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search companies..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            <div className="flex items-center gap-3">
+              <Button variant="heroOutline" size="sm" onClick={() => navigate("/raw-data")}>
+                <Database className="h-4 w-4 mr-2" /> Raw Data
+              </Button>
+              <Button variant="heroOutline" size="sm" onClick={() => navigate("/connectors")}>
+                <Zap className="h-4 w-4 mr-2" /> Automated Import
+              </Button>
+              <Button variant="hero" size="sm" onClick={() => setAddDialogOpen(true)}>
+                <Plus className="h-4 w-4 mr-2" /> Add Company
+              </Button>
+            </div>
+          </div>
+
+          <AddCompanyDialog
+            open={addDialogOpen}
+            onOpenChange={setAddDialogOpen}
+            onAddCompany={handleAddCompany}
+            onUploadCSV={handleUploadCSV}
+          />
+
+          {/* Table */}
+          <div className="rounded-xl border border-border bg-card overflow-hidden">
+            <Table>
+              <TableHeader>
+                <TableRow className="hover:bg-transparent">
+                  <TableHead>Company</TableHead>
+                  <TableHead>Industry</TableHead>
+                  <TableHead>Health Score</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Last Login</TableHead>
                 </TableRow>
-              ))}
-              {filtered.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
-                    No companies found.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {filtered.map((company) => (
+                  <TableRow key={company.id} className="cursor-pointer">
+                    <TableCell className="font-medium">{company.name}</TableCell>
+                    <TableCell className="text-muted-foreground">{company.industry}</TableCell>
+                    <TableCell>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span className={`font-semibold cursor-help ${getScoreColor(company.healthScore)}`}>
+                            {company.healthScore}
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent className="max-w-xs">
+                          <p className="font-semibold mb-1">Score Breakdown</p>
+                          <div className="space-y-0.5 text-xs">
+                            {company.breakdown.map((b) => (
+                              <div key={b.field} className="flex justify-between gap-4">
+                                <span className="text-muted-foreground capitalize">{b.field.replace(/([A-Z])/g, " $1")}</span>
+                                <span>{b.fieldScore} × {b.weight}% = <span className="font-medium">{b.contribution}</span></span>
+                              </div>
+                            ))}
+                          </div>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TableCell>
+                    <TableCell>{getStatusBadge(company.status)}</TableCell>
+                    <TableCell className="text-right text-muted-foreground text-sm">
+                      {company.lastLogin}
+                    </TableCell>
+                  </TableRow>
+                ))}
+                {filtered.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
+                      No companies found.
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
         </div>
       </div>
-    </div>
+    </TooltipProvider>
   );
 };
 
