@@ -25,11 +25,13 @@ interface FieldConfig {
   type: "number" | "date" | "text";
   align: "left" | "right";
   isCustom?: boolean;
+  min?: number;
+  max?: number;
 }
 
 const defaultFields: FieldConfig[] = [
   { key: "mrr", label: "MRR ($)", weight: 20, enabled: true, type: "number", align: "right" },
-  { key: "nps", label: "NPS", weight: 20, enabled: true, type: "number", align: "right" },
+  { key: "nps", label: "NPS", weight: 20, enabled: true, type: "number", align: "right", min: -100, max: 100 },
   { key: "lastLogin", label: "Last Login", weight: 10, enabled: true, type: "date", align: "left" },
   { key: "supportTickets", label: "Support Tickets", weight: 15, enabled: true, type: "number", align: "right" },
   { key: "contractEnd", label: "Contract End", weight: 10, enabled: true, type: "date", align: "left" },
