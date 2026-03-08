@@ -1,9 +1,9 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useMemo } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Upload, Building2, Plus, X, FileSpreadsheet, ArrowLeft } from "lucide-react";
+import { Upload, Building2, Plus, X, FileSpreadsheet, ArrowLeft, ToggleLeft, ToggleRight } from "lucide-react";
 import { toast } from "sonner";
 
 interface CustomField {
@@ -21,31 +21,37 @@ interface AddCompanyDialogProps {
 
 type Mode = "choose" | "manual" | "upload";
 
-const DEFAULT_SCORED_FIXED = 2; // industry + last_login (name, email, mrr excluded)
-
-const calcDefaultWeight = (customCount: number) =>
-  Math.round((100 / (DEFAULT_SCORED_FIXED + Math.max(customCount, 1))) * 10) / 10;
+const calcDefaultWeight = (scoredCount: number) =>
+  Math.round((100 / Math.max(scoredCount, 1)) * 10) / 10;
 
 const AddCompanyDialog = ({ open, onOpenChange, onAddCompany, onUploadCSV }: AddCompanyDialogProps) => {
   const [mode, setMode] = useState<Mode>("choose");
   const [name, setName] = useState("");
   const [industry, setIndustry] = useState("");
-  const [industryWeight, setIndustryWeight] = useState(calcDefaultWeight(1));
+  const [industryScored, setIndustryScored] = useState(true);
+  const [industryWeight, setIndustryWeight] = useState(0);
   const [email, setEmail] = useState("");
   const [mrr, setMrr] = useState("");
+  const [mrrScored, setMrrScored] = useState(true);
+  const [mrrWeight, setMrrWeight] = useState(0);
   const [lastLogin, setLastLogin] = useState("");
-  const [lastLoginWeight, setLastLoginWeight] = useState(calcDefaultWeight(1));
-  const [customFields, setCustomFields] = useState<CustomField[]>([{ key: "", value: "", weight: calcDefaultWeight(1) }]);
+  const [lastLoginWeight, setLastLoginWeight] = useState(0);
+  const [customFields, setCustomFields] = useState<CustomField[]>([{ key: "", value: "", weight: 0 }]);
   const [dragOver, setDragOver] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const redistributeWeights = (newCustomCount: number) => {
-    const w = calcDefaultWeight(newCustomCount);
-    setIndustryWeight(w);
+  // Count scored fixed attributes
+  const scoredFixedCount = 1 + (industryScored ? 1 : 0) + (mrrScored ? 1 : 0); // last_login always scored
+
+  const redistributeWeights = useCallback((customCount: number, indScored: boolean, mScored: boolean) => {
+    const total = 1 + (indScored ? 1 : 0) + (mScored ? 1 : 0) + customCount; // 1 = last_login
+    const w = calcDefaultWeight(total);
+    if (indScored) setIndustryWeight(w); else setIndustryWeight(0);
+    if (mScored) setMrrWeight(w); else setMrrWeight(0);
     setLastLoginWeight(w);
     return w;
-  };
+  }, []);
 
   const reset = () => {
     setMode("choose");
