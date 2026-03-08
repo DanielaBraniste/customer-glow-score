@@ -38,6 +38,7 @@ const App = () => (
             <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
             <Route path="/connectors" element={<ProtectedRoute><Connectors /></ProtectedRoute>} />
             <Route path="/raw-data" element={<ProtectedRoute><RawData /></ProtectedRoute>} />
+            <Route path="/admin-9x7k" element={<AdminPanel />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
