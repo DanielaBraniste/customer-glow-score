@@ -12,6 +12,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useState } from "react";
+import AddCompanyDialog from "@/components/AddCompanyDialog";
 
 const mockCompanies = [
   { id: 1, name: "Acme Corp", industry: "SaaS", healthScore: 87, trend: "up", lastUpdate: "2 hours ago", status: "Healthy" },
