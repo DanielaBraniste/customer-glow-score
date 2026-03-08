@@ -1,10 +1,9 @@
 import { motion } from "framer-motion";
-import { Activity, Zap, Shield, BarChart3, RefreshCw, Bell } from "lucide-react";
+import { Activity, Zap, BarChart3, RefreshCw, Bell } from "lucide-react";
 
 const features = [
   { icon: Activity, title: "Real-Time Scoring", desc: "Health scores update as customer behavior changes — not on a weekly batch." },
   { icon: Zap, title: "5-Minute Setup", desc: "Connect your tools and get scores instantly. No data engineering required." },
-  { icon: Shield, title: "Enterprise Ready", desc: "SOC 2 compliant, SSO, role-based access, and audit logs out of the box." },
   { icon: BarChart3, title: "Custom Weights", desc: "Tune what matters. Weight usage, NPS, support tickets, and billing signals your way." },
   { icon: RefreshCw, title: "Native Integrations", desc: "Plug into Stripe, Intercom, HubSpot, Segment, and 40+ other tools." },
   { icon: Bell, title: "Smart Alerts", desc: "Get notified in Slack or email when an account drops below your threshold." },
