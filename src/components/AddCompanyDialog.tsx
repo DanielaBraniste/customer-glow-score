@@ -201,31 +201,60 @@ const AddCompanyDialog = ({ open, onOpenChange, onAddCompany, onUploadCSV }: Add
                   <Input id="email" type="email" placeholder="contact@acme.com" value={email} onChange={(e) => setEmail(e.target.value)} />
                 </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="mrr">MRR ($)</Label>
-                <Input id="mrr" type="number" placeholder="12000" value={mrr} onChange={(e) => setMrr(e.target.value)} />
-              </div>
 
               {/* Scored default attributes with weight */}
               <div className="space-y-3">
                 <Label className="text-muted-foreground text-xs uppercase tracking-wider">Scored Attributes</Label>
                 <div className="flex items-center gap-2 text-xs text-muted-foreground px-1">
+                  <span className="w-6" />
                   <span className="flex-1">Attribute</span>
                   <span className="flex-1">Value</span>
                   <span className="w-20 text-center">Weight</span>
-                  <span className="w-6" />
                 </div>
+                {/* Industry */}
                 <div className="flex items-center gap-2">
-                  <Input value="Industry" disabled className="flex-1 opacity-60" />
-                  <Input placeholder="SaaS" value={industry} onChange={(e) => setIndustry(e.target.value)} className="flex-1" />
-                  <Input type="number" min={0} value={industryWeight} onChange={(e) => setIndustryWeight(Number(e.target.value) || 0)} className="w-20 text-center" />
-                  <span className="w-6" />
+                  <button
+                    onClick={() => {
+                      const next = !industryScored;
+                      setIndustryScored(next);
+                      const w = redistributeWeights(customFields.length, next, mrrScored);
+                      setCustomFields(customFields.map((f) => ({ ...f, weight: w })));
+                    }}
+                    className="text-muted-foreground hover:text-foreground transition-colors"
+                    title={industryScored ? "Disable scoring" : "Enable scoring"}
+                  >
+                    {industryScored ? <ToggleRight className="h-5 w-5 text-primary" /> : <ToggleLeft className="h-5 w-5" />}
+                  </button>
+                  <Input value="Industry" disabled className={`flex-1 ${industryScored ? "opacity-60" : "opacity-30"}`} />
+                  <Input placeholder="SaaS" value={industry} onChange={(e) => setIndustry(e.target.value)} className="flex-1" disabled={!industryScored} />
+                  <Input type="number" min={0} value={industryWeight} onChange={(e) => setIndustryWeight(Number(e.target.value) || 0)} className="w-20 text-center" disabled={!industryScored} />
                 </div>
+                {/* MRR */}
                 <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => {
+                      const next = !mrrScored;
+                      setMrrScored(next);
+                      const w = redistributeWeights(customFields.length, industryScored, next);
+                      setCustomFields(customFields.map((f) => ({ ...f, weight: w })));
+                    }}
+                    className="text-muted-foreground hover:text-foreground transition-colors"
+                    title={mrrScored ? "Disable scoring" : "Enable scoring"}
+                  >
+                    {mrrScored ? <ToggleRight className="h-5 w-5 text-primary" /> : <ToggleLeft className="h-5 w-5" />}
+                  </button>
+                  <Input value="MRR ($)" disabled className={`flex-1 ${mrrScored ? "opacity-60" : "opacity-30"}`} />
+                  <Input type="number" placeholder="12000" value={mrr} onChange={(e) => setMrr(e.target.value)} className="flex-1" />
+                  <Input type="number" min={0} value={mrrWeight} onChange={(e) => setMrrWeight(Number(e.target.value) || 0)} className="w-20 text-center" disabled={!mrrScored} />
+                </div>
+                {/* Last Login */}
+                <div className="flex items-center gap-2">
+                  <span className="w-6 flex items-center justify-center">
+                    <ToggleRight className="h-5 w-5 text-primary opacity-50" />
+                  </span>
                   <Input value="Last Login" disabled className="flex-1 opacity-60" />
                   <Input type="date" value={lastLogin} onChange={(e) => setLastLogin(e.target.value)} className="flex-1" />
                   <Input type="number" min={0} value={lastLoginWeight} onChange={(e) => setLastLoginWeight(Number(e.target.value) || 0)} className="w-20 text-center" />
-                  <span className="w-6" />
                 </div>
               </div>
 
