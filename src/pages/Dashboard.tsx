@@ -116,10 +116,17 @@ const Dashboard = () => {
               className="pl-10"
             />
           </div>
-          <Button variant="hero" size="sm">
+          <Button variant="hero" size="sm" onClick={() => setAddDialogOpen(true)}>
             <Plus className="h-4 w-4 mr-2" /> Add Company
           </Button>
         </div>
+
+        <AddCompanyDialog
+          open={addDialogOpen}
+          onOpenChange={setAddDialogOpen}
+          onAddCompany={handleAddCompany}
+          onUploadCSV={handleUploadCSV}
+        />
 
         {/* Table */}
         <div className="rounded-xl border border-border bg-card overflow-hidden">
