@@ -21,17 +21,31 @@ interface AddCompanyDialogProps {
 
 type Mode = "choose" | "manual" | "upload";
 
+const DEFAULT_SCORED_FIXED = 2; // industry + last_login (name, email, mrr excluded)
+
+const calcDefaultWeight = (customCount: number) =>
+  Math.round((100 / (DEFAULT_SCORED_FIXED + Math.max(customCount, 1))) * 10) / 10;
+
 const AddCompanyDialog = ({ open, onOpenChange, onAddCompany, onUploadCSV }: AddCompanyDialogProps) => {
   const [mode, setMode] = useState<Mode>("choose");
   const [name, setName] = useState("");
   const [industry, setIndustry] = useState("");
+  const [industryWeight, setIndustryWeight] = useState(calcDefaultWeight(1));
   const [email, setEmail] = useState("");
   const [mrr, setMrr] = useState("");
   const [lastLogin, setLastLogin] = useState("");
-  const [customFields, setCustomFields] = useState<CustomField[]>([{ key: "", value: "", weight: 1 }]);
+  const [lastLoginWeight, setLastLoginWeight] = useState(calcDefaultWeight(1));
+  const [customFields, setCustomFields] = useState<CustomField[]>([{ key: "", value: "", weight: calcDefaultWeight(1) }]);
   const [dragOver, setDragOver] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const redistributeWeights = (newCustomCount: number) => {
+    const w = calcDefaultWeight(newCustomCount);
+    setIndustryWeight(w);
+    setLastLoginWeight(w);
+    return w;
+  };
 
   const reset = () => {
     setMode("choose");
@@ -40,7 +54,10 @@ const AddCompanyDialog = ({ open, onOpenChange, onAddCompany, onUploadCSV }: Add
     setEmail("");
     setMrr("");
     setLastLogin("");
-    setCustomFields([{ key: "", value: "", weight: 1 }]);
+    const w = calcDefaultWeight(1);
+    setIndustryWeight(w);
+    setLastLoginWeight(w);
+    setCustomFields([{ key: "", value: "", weight: w }]);
     setSelectedFile(null);
     setDragOver(false);
   };
@@ -50,11 +67,17 @@ const AddCompanyDialog = ({ open, onOpenChange, onAddCompany, onUploadCSV }: Add
     onOpenChange(val);
   };
 
-  const addField = () => setCustomFields([...customFields, { key: "", value: "", weight: 1 }]);
+  const addField = () => {
+    const newFields = [...customFields, { key: "", value: "", weight: 0 }];
+    const w = redistributeWeights(newFields.length);
+    setCustomFields(newFields.map((f) => ({ ...f, weight: w })));
+  };
 
   const removeField = (idx: number) => {
     if (customFields.length <= 1) return;
-    setCustomFields(customFields.filter((_, i) => i !== idx));
+    const newFields = customFields.filter((_, i) => i !== idx);
+    const w = redistributeWeights(newFields.length);
+    setCustomFields(newFields.map((f) => ({ ...f, weight: w })));
   };
 
   const updateField = (idx: number, prop: "key" | "value" | "weight", val: string) => {
