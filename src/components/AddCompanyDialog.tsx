@@ -267,7 +267,7 @@ const AddCompanyDialog = ({ open, onOpenChange, onAddCompany, onUploadCSV }: Add
                   </div>
                 ))}
                 <p className="text-xs text-muted-foreground">
-                  Weight determines how much each attribute influences the health score (0–10).
+                  Weights auto-distribute to 100 total. Adjust to control each attribute's influence on the health score.
                 </p>
               </div>
             </div>
