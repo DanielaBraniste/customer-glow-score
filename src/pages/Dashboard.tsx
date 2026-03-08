@@ -2,6 +2,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { LogOut, Plus, Search, Building2, TrendingUp, TrendingDown, Minus } from "lucide-react";
+import { Zap } from "lucide-react";
 import UserProfile from "@/components/UserProfile";
 import { Input } from "@/components/ui/input";
 import {
@@ -120,10 +121,14 @@ const Dashboard = () => {
               className="pl-10"
             />
           </div>
-          <Button variant="hero" size="sm" onClick={() => setAddDialogOpen(true)}>
-            <Plus className="h-4 w-4 mr-2" /> Add Company
-          </Button>
-        </div>
+          <div className="flex items-center gap-3">
+            <Button variant="heroOutline" size="sm" onClick={() => navigate("/connectors")}>
+              <Zap className="h-4 w-4 mr-2" /> Automated Import
+            </Button>
+            <Button variant="hero" size="sm" onClick={() => setAddDialogOpen(true)}>
+              <Plus className="h-4 w-4 mr-2" /> Add Company
+            </Button>
+          </div>
 
         <AddCompanyDialog
           open={addDialogOpen}
