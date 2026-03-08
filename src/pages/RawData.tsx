@@ -25,11 +25,13 @@ interface FieldConfig {
   type: "number" | "date" | "text";
   align: "left" | "right";
   isCustom?: boolean;
+  min?: number;
+  max?: number;
 }
 
 const defaultFields: FieldConfig[] = [
   { key: "mrr", label: "MRR ($)", weight: 20, enabled: true, type: "number", align: "right" },
-  { key: "nps", label: "NPS", weight: 20, enabled: true, type: "number", align: "right" },
+  { key: "nps", label: "NPS", weight: 20, enabled: true, type: "number", align: "right", min: -100, max: 100 },
   { key: "lastLogin", label: "Last Login", weight: 10, enabled: true, type: "date", align: "left" },
   { key: "supportTickets", label: "Support Tickets", weight: 15, enabled: true, type: "number", align: "right" },
   { key: "contractEnd", label: "Contract End", weight: 10, enabled: true, type: "date", align: "left" },
@@ -54,7 +56,13 @@ const allDates = [...new Set(mockRawData.map((r) => r.date))].sort().reverse();
 const allSources = [...new Set(mockRawData.map((r) => r.source))].sort();
 
 const getValueColor = (key: string, val: number) => {
-  if (key === "nps" || key === "usageScore") {
+  if (key === "nps") {
+    // NPS range: -100 to 100. >50 great, 0–50 ok, <0 bad
+    if (val > 50) return "text-primary";
+    if (val >= 0) return "text-yellow-400";
+    return "text-destructive";
+  }
+  if (key === "usageScore") {
     if (val >= 80) return "text-primary";
     if (val >= 50) return "text-yellow-400";
     return "text-destructive";
