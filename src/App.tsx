@@ -9,6 +9,7 @@ import Auth from "./pages/Auth";
 import Trial from "./pages/Trial";
 import Dashboard from "./pages/Dashboard";
 import Connectors from "./pages/Connectors";
+import RawData from "./pages/RawData";
 import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
 
@@ -35,6 +36,7 @@ const App = () => (
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
             <Route path="/connectors" element={<ProtectedRoute><Connectors /></ProtectedRoute>} />
+            <Route path="/raw-data" element={<ProtectedRoute><RawData /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
