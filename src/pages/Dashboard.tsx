@@ -12,6 +12,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useState } from "react";
+import AddCompanyDialog from "@/components/AddCompanyDialog";
 
 const mockCompanies = [
   { id: 1, name: "Acme Corp", industry: "SaaS", healthScore: 87, trend: "up", lastUpdate: "2 hours ago", status: "Healthy" },
@@ -52,6 +53,17 @@ const Dashboard = () => {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
+  const [addDialogOpen, setAddDialogOpen] = useState(false);
+
+  const handleAddCompany = (company: { name: string; industry: string; fields: { key: string; value: string }[] }) => {
+    console.log("Add company:", company);
+    // TODO: persist to database
+  };
+
+  const handleUploadCSV = (file: File) => {
+    console.log("Upload CSV:", file.name);
+    // TODO: parse and persist
+  };
 
   const handleSignOut = async () => {
     await signOut();
@@ -104,10 +116,17 @@ const Dashboard = () => {
               className="pl-10"
             />
           </div>
-          <Button variant="hero" size="sm">
+          <Button variant="hero" size="sm" onClick={() => setAddDialogOpen(true)}>
             <Plus className="h-4 w-4 mr-2" /> Add Company
           </Button>
         </div>
+
+        <AddCompanyDialog
+          open={addDialogOpen}
+          onOpenChange={setAddDialogOpen}
+          onAddCompany={handleAddCompany}
+          onUploadCSV={handleUploadCSV}
+        />
 
         {/* Table */}
         <div className="rounded-xl border border-border bg-card overflow-hidden">
