@@ -1,7 +1,7 @@
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
-import { LogOut, Plus, Search, Building2, TrendingUp, TrendingDown, Minus } from "lucide-react";
+import { LogOut, Plus, Search, Building2, TrendingUp, TrendingDown, Minus, Database } from "lucide-react";
 import { Zap } from "lucide-react";
 import UserProfile from "@/components/UserProfile";
 import { Input } from "@/components/ui/input";
