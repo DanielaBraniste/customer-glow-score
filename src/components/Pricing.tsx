@@ -145,8 +145,8 @@ const Pricing = () => (
                     </a>
                   </Button>
                 ) : (
-                  <Button variant={plan.variant} className="w-full">
-                    {plan.cta}
+                  <Button variant={plan.variant} className="w-full" asChild>
+                    <Link to="/trial">{plan.cta}</Link>
                   </Button>
                 )}
               </CardFooter>
