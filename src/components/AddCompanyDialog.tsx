@@ -57,11 +57,14 @@ const AddCompanyDialog = ({ open, onOpenChange, onAddCompany, onUploadCSV }: Add
     setMode("choose");
     setName("");
     setIndustry("");
+    setIndustryScored(true);
+    setMrrScored(true);
     setEmail("");
     setMrr("");
     setLastLogin("");
-    const w = calcDefaultWeight(1);
+    const w = calcDefaultWeight(4); // last_login + industry + mrr + 1 custom
     setIndustryWeight(w);
+    setMrrWeight(w);
     setLastLoginWeight(w);
     setCustomFields([{ key: "", value: "", weight: w }]);
     setSelectedFile(null);
@@ -75,14 +78,14 @@ const AddCompanyDialog = ({ open, onOpenChange, onAddCompany, onUploadCSV }: Add
 
   const addField = () => {
     const newFields = [...customFields, { key: "", value: "", weight: 0 }];
-    const w = redistributeWeights(newFields.length);
+    const w = redistributeWeights(newFields.length, industryScored, mrrScored);
     setCustomFields(newFields.map((f) => ({ ...f, weight: w })));
   };
 
   const removeField = (idx: number) => {
     if (customFields.length <= 1) return;
     const newFields = customFields.filter((_, i) => i !== idx);
-    const w = redistributeWeights(newFields.length);
+    const w = redistributeWeights(newFields.length, industryScored, mrrScored);
     setCustomFields(newFields.map((f) => ({ ...f, weight: w })));
   };
 
