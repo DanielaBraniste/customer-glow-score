@@ -2,7 +2,7 @@ import { motion } from "framer-motion";
 
 const steps = [
   { num: "01", title: "Connect your stack", desc: "Link your CRM, billing, support, and product analytics tools in minutes." },
-  { num: "02", title: "We crunch the data", desc: "Desi normalizes signals and calculates a composite health score per account." },
+  { num: "02", title: "We crunch the data", desc: "Rescuro normalizes signals and calculates a composite health score per account." },
   { num: "03", title: "Act with confidence", desc: "Prioritize outreach, automate alerts, and prevent churn before it happens." },
 ];
 

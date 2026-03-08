@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 const stats = [
   { value: "40%", label: "Reduction in churn" },
   { value: "3x", label: "Faster risk detection" },
-  { value: "200+", label: "SaaS teams trust Desi" },
+  { value: "200+", label: "SaaS teams trust Rescuro" },
   { value: "10M+", label: "Accounts scored" },
 ];
 

@@ -26,7 +26,7 @@ const Hero = () => (
         </h1>
 
         <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto mb-10 leading-relaxed">
-          Desi gives SaaS teams a single health score per account — powered by usage, support, billing &amp; engagement data. No spreadsheets, no guesswork.
+          Rescuro gives SaaS teams a single health score per account — powered by usage, support, billing &amp; engagement data. No spreadsheets, no guesswork.
         </p>
 
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
