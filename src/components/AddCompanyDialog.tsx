@@ -27,16 +27,17 @@ const calcDefaultWeight = (scoredCount: number) =>
 const AddCompanyDialog = ({ open, onOpenChange, onAddCompany, onUploadCSV }: AddCompanyDialogProps) => {
   const [mode, setMode] = useState<Mode>("choose");
   const [name, setName] = useState("");
+  const initWeight = calcDefaultWeight(4); // industry + mrr + last_login + 1 custom
   const [industry, setIndustry] = useState("");
   const [industryScored, setIndustryScored] = useState(true);
-  const [industryWeight, setIndustryWeight] = useState(0);
+  const [industryWeight, setIndustryWeight] = useState(initWeight);
   const [email, setEmail] = useState("");
   const [mrr, setMrr] = useState("");
   const [mrrScored, setMrrScored] = useState(true);
-  const [mrrWeight, setMrrWeight] = useState(0);
+  const [mrrWeight, setMrrWeight] = useState(initWeight);
   const [lastLogin, setLastLogin] = useState("");
-  const [lastLoginWeight, setLastLoginWeight] = useState(0);
-  const [customFields, setCustomFields] = useState<CustomField[]>([{ key: "", value: "", weight: 0 }]);
+  const [lastLoginWeight, setLastLoginWeight] = useState(initWeight);
+  const [customFields, setCustomFields] = useState<CustomField[]>([{ key: "", value: "", weight: initWeight }]);
   const [dragOver, setDragOver] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
