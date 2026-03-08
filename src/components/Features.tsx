@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Activity, Zap, Shield, BarChart3, RefreshCw, Bell } from "lucide-react";
+import { Activity, Zap, BarChart3, RefreshCw, Bell } from "lucide-react";
 
 const features = [
   { icon: Activity, title: "Real-Time Scoring", desc: "Health scores update as customer behavior changes — not on a weekly batch." },
