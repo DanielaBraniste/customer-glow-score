@@ -109,9 +109,9 @@ const Trial = () => {
 
           <div className="flex items-center gap-2 mb-8">
             <div className="h-9 w-9 rounded-lg bg-primary flex items-center justify-center">
-              <span className="text-primary-foreground font-bold">D</span>
+              <span className="text-primary-foreground font-bold">R</span>
             </div>
-            <span className="font-bold text-xl">Desi</span>
+            <span className="font-bold text-xl">Rescuro</span>
           </div>
 
           <div className="inline-flex items-center rounded-full border border-primary/20 bg-primary/5 px-3 py-1 mb-6">
@@ -162,9 +162,9 @@ const Trial = () => {
             <CardHeader className="text-center">
               <div className="flex lg:hidden items-center justify-center gap-2 mb-4">
                 <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center">
-                  <span className="text-primary-foreground font-bold text-sm">D</span>
+                  <span className="text-primary-foreground font-bold text-sm">R</span>
                 </div>
-                <span className="font-bold text-lg">Desi</span>
+                <span className="font-bold text-lg">Rescuro</span>
               </div>
               <CardTitle className="text-2xl">Create your account</CardTitle>
               <CardDescription>
