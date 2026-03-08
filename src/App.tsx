@@ -12,6 +12,7 @@ import Connectors from "./pages/Connectors";
 import RawData from "./pages/RawData";
 import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
+import AdminPanel from "./pages/AdminPanel";
 
 const queryClient = new QueryClient();
 
