@@ -21,17 +21,31 @@ interface AddCompanyDialogProps {
 
 type Mode = "choose" | "manual" | "upload";
 
+const DEFAULT_SCORED_FIXED = 2; // industry + last_login (name, email, mrr excluded)
+
+const calcDefaultWeight = (customCount: number) =>
+  Math.round((100 / (DEFAULT_SCORED_FIXED + Math.max(customCount, 1))) * 10) / 10;
+
 const AddCompanyDialog = ({ open, onOpenChange, onAddCompany, onUploadCSV }: AddCompanyDialogProps) => {
   const [mode, setMode] = useState<Mode>("choose");
   const [name, setName] = useState("");
   const [industry, setIndustry] = useState("");
+  const [industryWeight, setIndustryWeight] = useState(calcDefaultWeight(1));
   const [email, setEmail] = useState("");
   const [mrr, setMrr] = useState("");
   const [lastLogin, setLastLogin] = useState("");
-  const [customFields, setCustomFields] = useState<CustomField[]>([{ key: "", value: "", weight: 1 }]);
+  const [lastLoginWeight, setLastLoginWeight] = useState(calcDefaultWeight(1));
+  const [customFields, setCustomFields] = useState<CustomField[]>([{ key: "", value: "", weight: calcDefaultWeight(1) }]);
   const [dragOver, setDragOver] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const redistributeWeights = (newCustomCount: number) => {
+    const w = calcDefaultWeight(newCustomCount);
+    setIndustryWeight(w);
+    setLastLoginWeight(w);
+    return w;
+  };
 
   const reset = () => {
     setMode("choose");
@@ -40,7 +54,10 @@ const AddCompanyDialog = ({ open, onOpenChange, onAddCompany, onUploadCSV }: Add
     setEmail("");
     setMrr("");
     setLastLogin("");
-    setCustomFields([{ key: "", value: "", weight: 1 }]);
+    const w = calcDefaultWeight(1);
+    setIndustryWeight(w);
+    setLastLoginWeight(w);
+    setCustomFields([{ key: "", value: "", weight: w }]);
     setSelectedFile(null);
     setDragOver(false);
   };
@@ -50,11 +67,17 @@ const AddCompanyDialog = ({ open, onOpenChange, onAddCompany, onUploadCSV }: Add
     onOpenChange(val);
   };
 
-  const addField = () => setCustomFields([...customFields, { key: "", value: "", weight: 1 }]);
+  const addField = () => {
+    const newFields = [...customFields, { key: "", value: "", weight: 0 }];
+    const w = redistributeWeights(newFields.length);
+    setCustomFields(newFields.map((f) => ({ ...f, weight: w })));
+  };
 
   const removeField = (idx: number) => {
     if (customFields.length <= 1) return;
-    setCustomFields(customFields.filter((_, i) => i !== idx));
+    const newFields = customFields.filter((_, i) => i !== idx);
+    const w = redistributeWeights(newFields.length);
+    setCustomFields(newFields.map((f) => ({ ...f, weight: w })));
   };
 
   const updateField = (idx: number, prop: "key" | "value" | "weight", val: string) => {
@@ -165,23 +188,36 @@ const AddCompanyDialog = ({ open, onOpenChange, onAddCompany, onUploadCSV }: Add
                   <Input id="company-name" placeholder="Acme Corp" value={name} onChange={(e) => setName(e.target.value)} />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="industry">Industry</Label>
-                  <Input id="industry" placeholder="SaaS" value={industry} onChange={(e) => setIndustry(e.target.value)} />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
                   <Label htmlFor="email">Main Email</Label>
                   <Input id="email" type="email" placeholder="contact@acme.com" value={email} onChange={(e) => setEmail(e.target.value)} />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="mrr">MRR ($)</Label>
-                  <Input id="mrr" type="number" placeholder="12000" value={mrr} onChange={(e) => setMrr(e.target.value)} />
-                </div>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="last-login">Last Login</Label>
-                <Input id="last-login" type="date" value={lastLogin} onChange={(e) => setLastLogin(e.target.value)} />
+                <Label htmlFor="mrr">MRR ($)</Label>
+                <Input id="mrr" type="number" placeholder="12000" value={mrr} onChange={(e) => setMrr(e.target.value)} />
+              </div>
+
+              {/* Scored default attributes with weight */}
+              <div className="space-y-3">
+                <Label className="text-muted-foreground text-xs uppercase tracking-wider">Scored Attributes</Label>
+                <div className="flex items-center gap-2 text-xs text-muted-foreground px-1">
+                  <span className="flex-1">Attribute</span>
+                  <span className="flex-1">Value</span>
+                  <span className="w-20 text-center">Weight</span>
+                  <span className="w-6" />
+                </div>
+                <div className="flex items-center gap-2">
+                  <Input value="Industry" disabled className="flex-1 opacity-60" />
+                  <Input placeholder="SaaS" value={industry} onChange={(e) => setIndustry(e.target.value)} className="flex-1" />
+                  <Input type="number" min={0} value={industryWeight} onChange={(e) => setIndustryWeight(Number(e.target.value) || 0)} className="w-20 text-center" />
+                  <span className="w-6" />
+                </div>
+                <div className="flex items-center gap-2">
+                  <Input value="Last Login" disabled className="flex-1 opacity-60" />
+                  <Input type="date" value={lastLogin} onChange={(e) => setLastLogin(e.target.value)} className="flex-1" />
+                  <Input type="number" min={0} value={lastLoginWeight} onChange={(e) => setLastLoginWeight(Number(e.target.value) || 0)} className="w-20 text-center" />
+                  <span className="w-6" />
+                </div>
               </div>
 
               {/* Custom attributes with weight */}
@@ -231,7 +267,7 @@ const AddCompanyDialog = ({ open, onOpenChange, onAddCompany, onUploadCSV }: Add
                   </div>
                 ))}
                 <p className="text-xs text-muted-foreground">
-                  Weight determines how much each attribute influences the health score (0–10).
+                  Weights auto-distribute to 100 total. Adjust to control each attribute's influence on the health score.
                 </p>
               </div>
             </div>
