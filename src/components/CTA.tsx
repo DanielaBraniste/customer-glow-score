@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
+import { Link } from "react-router-dom";
 
 const CTA = () => (
   <section className="py-28 px-6 relative overflow-hidden">
@@ -18,8 +19,8 @@ const CTA = () => (
       <p className="text-muted-foreground text-lg mb-10 max-w-xl mx-auto">
         Join 200+ SaaS companies using Desi to retain more customers and grow faster.
       </p>
-      <Button variant="hero" size="lg" className="h-12 px-8">
-        Get Started Free <ArrowRight className="ml-1 h-4 w-4" />
+      <Button asChild variant="hero" size="lg" className="h-12 px-8">
+        <Link to="/trial">Get Started Free <ArrowRight className="ml-1 h-4 w-4" /></Link>
       </Button>
     </motion.div>
   </section>

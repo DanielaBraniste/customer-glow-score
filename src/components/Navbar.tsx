@@ -41,7 +41,7 @@ const Navbar = () => {
               <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={() => navigate("/auth")}>
                 Log in
               </Button>
-              <Button variant="hero" size="sm" onClick={() => navigate("/auth")}>
+              <Button variant="hero" size="sm" onClick={() => navigate("/trial")}>
                 Get Started
               </Button>
             </>

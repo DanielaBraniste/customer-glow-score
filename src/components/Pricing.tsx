@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Check } from "lucide-react";
+import { Link } from "react-router-dom";
 
 const plans = [
   {
@@ -144,8 +145,8 @@ const Pricing = () => (
                     </a>
                   </Button>
                 ) : (
-                  <Button variant={plan.variant} className="w-full">
-                    {plan.cta}
+                  <Button variant={plan.variant} className="w-full" asChild>
+                    <Link to="/trial">{plan.cta}</Link>
                   </Button>
                 )}
               </CardFooter>

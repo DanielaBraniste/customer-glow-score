@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
+import { Link } from "react-router-dom";
 
 const Hero = () => (
   <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
@@ -29,8 +30,8 @@ const Hero = () => (
         </p>
 
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
-          <Button variant="hero" size="lg" className="h-12 px-8">
-            Start Free Trial <ArrowRight className="ml-1 h-4 w-4" />
+          <Button asChild variant="hero" size="lg" className="h-12 px-8">
+            <Link to="/trial">Start Free Trial <ArrowRight className="ml-1 h-4 w-4" /></Link>
           </Button>
           <Button asChild variant="heroOutline" size="lg" className="h-12 px-8">
             <a href="https://calendar.google.com/appointments/schedules/AcZssZ2tBT5NYypWaK5wf9lE_qTonRFPjcazbqADCR4NlmVyhaa6zn22cz6SHTRO8GP5XQPT-09cWxF5" target="_blank" rel="noopener noreferrer">
