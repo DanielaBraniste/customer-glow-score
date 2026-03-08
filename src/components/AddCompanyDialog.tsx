@@ -188,23 +188,36 @@ const AddCompanyDialog = ({ open, onOpenChange, onAddCompany, onUploadCSV }: Add
                   <Input id="company-name" placeholder="Acme Corp" value={name} onChange={(e) => setName(e.target.value)} />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="industry">Industry</Label>
-                  <Input id="industry" placeholder="SaaS" value={industry} onChange={(e) => setIndustry(e.target.value)} />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
                   <Label htmlFor="email">Main Email</Label>
                   <Input id="email" type="email" placeholder="contact@acme.com" value={email} onChange={(e) => setEmail(e.target.value)} />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="mrr">MRR ($)</Label>
-                  <Input id="mrr" type="number" placeholder="12000" value={mrr} onChange={(e) => setMrr(e.target.value)} />
-                </div>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="last-login">Last Login</Label>
-                <Input id="last-login" type="date" value={lastLogin} onChange={(e) => setLastLogin(e.target.value)} />
+                <Label htmlFor="mrr">MRR ($)</Label>
+                <Input id="mrr" type="number" placeholder="12000" value={mrr} onChange={(e) => setMrr(e.target.value)} />
+              </div>
+
+              {/* Scored default attributes with weight */}
+              <div className="space-y-3">
+                <Label className="text-muted-foreground text-xs uppercase tracking-wider">Scored Attributes</Label>
+                <div className="flex items-center gap-2 text-xs text-muted-foreground px-1">
+                  <span className="flex-1">Attribute</span>
+                  <span className="flex-1">Value</span>
+                  <span className="w-20 text-center">Weight</span>
+                  <span className="w-6" />
+                </div>
+                <div className="flex items-center gap-2">
+                  <Input value="Industry" disabled className="flex-1 opacity-60" />
+                  <Input placeholder="SaaS" value={industry} onChange={(e) => setIndustry(e.target.value)} className="flex-1" />
+                  <Input type="number" min={0} value={industryWeight} onChange={(e) => setIndustryWeight(Number(e.target.value) || 0)} className="w-20 text-center" />
+                  <span className="w-6" />
+                </div>
+                <div className="flex items-center gap-2">
+                  <Input value="Last Login" disabled className="flex-1 opacity-60" />
+                  <Input type="date" value={lastLogin} onChange={(e) => setLastLogin(e.target.value)} className="flex-1" />
+                  <Input type="number" min={0} value={lastLoginWeight} onChange={(e) => setLastLoginWeight(Number(e.target.value) || 0)} className="w-20 text-center" />
+                  <span className="w-6" />
+                </div>
               </div>
 
               {/* Custom attributes with weight */}
