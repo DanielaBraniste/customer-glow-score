@@ -1,7 +1,7 @@
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
-import { LogOut, Plus, Search, Building2, TrendingUp, TrendingDown, Minus } from "lucide-react";
+import { LogOut, Plus, Search, Building2, TrendingUp, TrendingDown, Minus, Database } from "lucide-react";
 import { Zap } from "lucide-react";
 import UserProfile from "@/components/UserProfile";
 import { Input } from "@/components/ui/input";
@@ -122,6 +122,9 @@ const Dashboard = () => {
             />
           </div>
           <div className="flex items-center gap-3">
+            <Button variant="heroOutline" size="sm" onClick={() => navigate("/raw-data")}>
+              <Database className="h-4 w-4 mr-2" /> Raw Data
+            </Button>
             <Button variant="heroOutline" size="sm" onClick={() => navigate("/connectors")}>
               <Zap className="h-4 w-4 mr-2" /> Automated Import
             </Button>
