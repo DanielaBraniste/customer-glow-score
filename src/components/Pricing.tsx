@@ -7,6 +7,7 @@ import { Link } from "react-router-dom";
 
 const plans = [
   {
+    slug: "free",
     name: "Free",
     price: "$0",
     period: "/mo",
@@ -23,6 +24,7 @@ const plans = [
     popular: false,
   },
   {
+    slug: "starter",
     name: "Starter",
     price: "$37",
     period: "/mo",
@@ -39,6 +41,7 @@ const plans = [
     popular: false,
   },
   {
+    slug: "medium",
     name: "Medium",
     price: "$150",
     period: "/mo",
@@ -146,7 +149,7 @@ const Pricing = () => (
                   </Button>
                 ) : (
                   <Button variant={plan.variant} className="w-full" asChild>
-                    <Link to="/trial">{plan.cta}</Link>
+                    <Link to={`/trial?plan=${plan.slug}`}>{plan.cta}</Link>
                   </Button>
                 )}
               </CardFooter>
