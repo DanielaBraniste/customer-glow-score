@@ -122,6 +122,9 @@ const Dashboard = () => {
             />
           </div>
           <div className="flex items-center gap-3">
+            <Button variant="heroOutline" size="sm" onClick={() => navigate("/raw-data")}>
+              <Database className="h-4 w-4 mr-2" /> Raw Data
+            </Button>
             <Button variant="heroOutline" size="sm" onClick={() => navigate("/connectors")}>
               <Zap className="h-4 w-4 mr-2" /> Automated Import
             </Button>
