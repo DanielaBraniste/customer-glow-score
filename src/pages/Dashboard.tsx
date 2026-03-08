@@ -2,6 +2,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { LogOut, Plus, Search, Building2, TrendingUp, TrendingDown, Minus } from "lucide-react";
+import UserProfile from "@/components/UserProfile";
 import { Input } from "@/components/ui/input";
 import {
   Table,
@@ -78,9 +79,12 @@ const Dashboard = () => {
     <div className="min-h-screen bg-background pt-20 px-6">
       <div className="max-w-6xl mx-auto">
         <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-2xl font-bold">Dashboard</h1>
-            <p className="text-muted-foreground text-sm">Welcome, {user?.email}</p>
+          <div className="flex items-center gap-4">
+            <UserProfile />
+            <div>
+              <h1 className="text-2xl font-bold">Dashboard</h1>
+              <p className="text-muted-foreground text-sm">Welcome, {user?.email}</p>
+            </div>
           </div>
           <Button variant="heroOutline" size="sm" onClick={handleSignOut}>
             <LogOut className="h-4 w-4 mr-2" /> Sign Out
