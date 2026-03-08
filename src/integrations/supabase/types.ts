@@ -14,6 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      import_logs: {
+        Row: {
+          completed_at: string | null
+          connector_id: string
+          error_message: string | null
+          id: string
+          records_imported: number | null
+          started_at: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          connector_id: string
+          error_message?: string | null
+          id?: string
+          records_imported?: number | null
+          started_at?: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          connector_id?: string
+          error_message?: string | null
+          id?: string
+          records_imported?: number | null
+          started_at?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           company: string | null
@@ -50,6 +83,39 @@ export type Database = {
           updated_at?: string
           user_id?: string
           username?: string | null
+        }
+        Relationships: []
+      }
+      user_connectors: {
+        Row: {
+          api_key: string | null
+          connector_id: string
+          created_at: string
+          id: string
+          is_active: boolean
+          last_import_at: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          api_key?: string | null
+          connector_id: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          last_import_at?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          api_key?: string | null
+          connector_id?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          last_import_at?: string | null
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
