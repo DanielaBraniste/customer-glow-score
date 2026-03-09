@@ -29,7 +29,7 @@ const HowItWorks = () => (
             transition={{ duration: 0.5, delay: i * 0.1 }}
             className="flex items-start gap-6"
           >
-            <span className="text-4xl font-bold font-mono text-primary/30 shrink-0">{s.num}</span>
+            <span className="text-4xl font-bold font-mono text-primary/70 shrink-0">{s.num}</span>
             <div>
               <h3 className="text-xl font-semibold mb-2">{s.title}</h3>
               <p className="text-muted-foreground leading-relaxed">{s.desc}</p>
