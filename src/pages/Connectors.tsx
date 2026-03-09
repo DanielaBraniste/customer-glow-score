@@ -100,7 +100,19 @@ const Connectors = () => {
     setUserConnectors(data || []);
     setSaving(false);
     setConnectDialog(null);
-    toast.success(`${connectDialog.name} connected! Daily imports are now active.`);
+    toast.success(`${connectDialog.name} connected! Running first import now…`);
+
+    // Trigger immediate import for this connector
+    supabase.functions.invoke("daily-import", {
+      body: { connector_id: connectDialog.id, user_id: user.id },
+    }).then(({ error }) => {
+      if (error) {
+        console.error("Immediate import failed:", error);
+        toast.error("First import failed — it will retry at 6 AM UTC.");
+      } else {
+        toast.success("Initial data import complete!");
+      }
+    });
   };
 
   const handleDisconnect = async (connectorId: string) => {
