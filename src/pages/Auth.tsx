@@ -54,6 +54,15 @@ const Auth = () => {
     else toast.success("Password reset email sent!");
   };
 
+  const handleGoogleSignIn = async () => {
+    const { error } = await lovable.auth.signInWithOAuth("google", {
+      redirect_uri: window.location.origin,
+    });
+    if (error) {
+      toast.error(error.message || "Google sign-in failed");
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background flex items-center justify-center px-6">
       <div className="w-full max-w-sm">
