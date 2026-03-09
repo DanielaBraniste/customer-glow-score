@@ -63,11 +63,22 @@ Deno.serve(async (req) => {
 
     const supabase = createClient(supabaseUrl, serviceRoleKey);
 
-    // Fetch all active connectors
-    const { data: activeConnectors, error: fetchError } = await supabase
-      .from("user_connectors")
-      .select("*")
-      .eq("is_active", true);
+    // Parse optional filters for single-connector import
+    let filterConnectorId: string | null = null;
+    let filterUserId: string | null = null;
+    try {
+      const body = await req.json();
+      filterConnectorId = body?.connector_id || null;
+      filterUserId = body?.user_id || null;
+    } catch {
+      // No body or invalid JSON — run for all active connectors
+    }
+
+    // Fetch active connectors, optionally filtered
+    let query = supabase.from("user_connectors").select("*").eq("is_active", true);
+    if (filterConnectorId) query = query.eq("connector_id", filterConnectorId);
+    if (filterUserId) query = query.eq("user_id", filterUserId);
+    const { data: activeConnectors, error: fetchError } = await query;
 
     if (fetchError) throw new Error(`Failed to fetch connectors: ${fetchError.message}`);
 
