@@ -14,6 +14,71 @@ export type Database = {
   }
   public: {
     Tables: {
+      companies: {
+        Row: {
+          created_at: string
+          email: string | null
+          id: string
+          industry: string | null
+          name: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          id?: string
+          industry?: string | null
+          name: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          id?: string
+          industry?: string | null
+          name?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      company_snapshots: {
+        Row: {
+          company_id: string
+          created_at: string
+          data: Json
+          id: string
+          snapshot_date: string
+          source: string
+          user_id: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          data?: Json
+          id?: string
+          snapshot_date?: string
+          source?: string
+          user_id: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          data?: Json
+          id?: string
+          snapshot_date?: string
+          source?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_snapshots_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       import_logs: {
         Row: {
           completed_at: string | null

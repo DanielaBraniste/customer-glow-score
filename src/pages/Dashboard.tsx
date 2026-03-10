@@ -1,49 +1,26 @@
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
-import { LogOut, Plus, Search, Building2, TrendingUp, TrendingDown, Minus, Database } from "lucide-react";
+import { LogOut, Plus, Search, Building2, TrendingUp, TrendingDown, Minus, Database, Loader2 } from "lucide-react";
 import { Zap } from "lucide-react";
 import UserProfile from "@/components/UserProfile";
 import { Input } from "@/components/ui/input";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { useMemo, useState } from "react";
 import AddCompanyDialog from "@/components/AddCompanyDialog";
 import { calculateHealthScore, DEFAULT_SCORE_FIELDS } from "@/lib/healthScore";
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
+  Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
 } from "@/components/ui/tooltip";
-
-// Raw data per company (latest snapshot) — will come from DB later
-const companyRawData = [
-  { id: 1, name: "Acme Corp", industry: "SaaS", mrr: 12000, nps: 72, lastLogin: "2026-03-07", supportTickets: 2, contractEnd: "2026-12-01", usageScore: 88 },
-  { id: 2, name: "Globex Inc", industry: "Fintech", mrr: 8500, nps: 45, lastLogin: "2026-02-20", supportTickets: 8, contractEnd: "2026-06-15", usageScore: 52 },
-  { id: 3, name: "Initech", industry: "Enterprise", mrr: 24000, nps: 91, lastLogin: "2026-03-08", supportTickets: 0, contractEnd: "2027-03-01", usageScore: 95 },
-  { id: 4, name: "Umbrella Co", industry: "Healthcare", mrr: 5200, nps: 28, lastLogin: "2026-01-15", supportTickets: 14, contractEnd: "2026-04-01", usageScore: 31 },
-  { id: 5, name: "Stark Industries", industry: "Manufacturing", mrr: 18000, nps: 67, lastLogin: "2026-03-07", supportTickets: 3, contractEnd: "2026-09-15", usageScore: 76 },
-  { id: 6, name: "Wayne Enterprises", industry: "Conglomerate", mrr: 15000, nps: 58, lastLogin: "2026-03-05", supportTickets: 5, contractEnd: "2026-11-01", usageScore: 69 },
-];
+import { useCompanies } from "@/hooks/useCompanies";
 
 const getStatus = (score: number) => {
   if (score >= 80) return "Healthy";
   if (score >= 60) return "Monitor";
   if (score >= 40) return "At Risk";
   return "Critical";
-};
-
-const getTrendIcon = (trend: string) => {
-  if (trend === "up") return <TrendingUp className="h-4 w-4 text-primary" />;
-  if (trend === "down") return <TrendingDown className="h-4 w-4 text-destructive" />;
-  return <Minus className="h-4 w-4 text-muted-foreground" />;
 };
 
 const getScoreColor = (score: number) => {
@@ -72,31 +49,29 @@ const Dashboard = () => {
   const [search, setSearch] = useState("");
   const [addDialogOpen, setAddDialogOpen] = useState(false);
 
-  // Use a fixed "today" matching mock data dates so scores are meaningful
-  const today = useMemo(() => new Date("2026-03-08"), []);
+  const { data: rawCompanies = [], isLoading } = useCompanies();
 
   const companies = useMemo(() => {
-    return companyRawData.map((c) => {
-      const result = calculateHealthScore(c, DEFAULT_SCORE_FIELDS, today);
+    return rawCompanies.map((c) => {
+      const scoreData = {
+        ...c.snapshotData,
+        industry: c.industry,
+      };
+      const result = calculateHealthScore(scoreData, DEFAULT_SCORE_FIELDS);
       return {
         ...c,
         healthScore: result.total,
         breakdown: result.breakdown,
         status: getStatus(result.total),
+        lastLogin: (c.snapshotData?.lastLogin as string) || "—",
       };
     });
-  }, [today]);
+  }, [rawCompanies]);
 
-  const avgScore = Math.round(companies.reduce((s, c) => s + c.healthScore, 0) / companies.length);
+  const avgScore = companies.length
+    ? Math.round(companies.reduce((s, c) => s + c.healthScore, 0) / companies.length)
+    : 0;
   const atRiskCount = companies.filter((c) => c.healthScore < 60).length;
-
-  const handleAddCompany = (company: { name: string; industry: string; fields: { key: string; value: string }[] }) => {
-    console.log("Add company:", company);
-  };
-
-  const handleUploadCSV = (file: File) => {
-    console.log("Upload CSV:", file.name);
-  };
 
   const handleSignOut = async () => {
     await signOut();
@@ -169,8 +144,6 @@ const Dashboard = () => {
           <AddCompanyDialog
             open={addDialogOpen}
             onOpenChange={setAddDialogOpen}
-            onAddCompany={handleAddCompany}
-            onUploadCSV={handleUploadCSV}
           />
 
           {/* Table */}
@@ -186,42 +159,51 @@ const Dashboard = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filtered.map((company) => (
-                  <TableRow key={company.id} className="cursor-pointer">
-                    <TableCell className="font-medium">{company.name}</TableCell>
-                    <TableCell className="text-muted-foreground">{company.industry}</TableCell>
-                    <TableCell>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <span className={`font-semibold cursor-help ${getScoreColor(company.healthScore)}`}>
-                            {company.healthScore}
-                          </span>
-                        </TooltipTrigger>
-                        <TooltipContent className="max-w-xs">
-                          <p className="font-semibold mb-1">Score Breakdown</p>
-                          <div className="space-y-0.5 text-xs">
-                            {company.breakdown.map((b) => (
-                              <div key={b.field} className="flex justify-between gap-4">
-                                <span className="text-muted-foreground capitalize">{b.field.replace(/([A-Z])/g, " $1")}</span>
-                                <span>{b.fieldScore} × {b.weight}% = <span className="font-medium">{b.contribution}</span></span>
-                              </div>
-                            ))}
-                          </div>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TableCell>
-                    <TableCell>{getStatusBadge(company.status)}</TableCell>
-                    <TableCell className="text-right text-muted-foreground text-sm">
-                      {company.lastLogin}
+                {isLoading ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center py-12">
+                      <Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" />
                     </TableCell>
                   </TableRow>
-                ))}
-                {filtered.length === 0 && (
+                ) : filtered.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
-                      No companies found.
+                      {companies.length === 0
+                        ? "No companies yet. Add one manually or import via CSV."
+                        : "No companies found."}
                     </TableCell>
                   </TableRow>
+                ) : (
+                  filtered.map((company) => (
+                    <TableRow key={company.id} className="cursor-pointer">
+                      <TableCell className="font-medium">{company.name}</TableCell>
+                      <TableCell className="text-muted-foreground">{company.industry}</TableCell>
+                      <TableCell>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span className={`font-semibold cursor-help ${getScoreColor(company.healthScore)}`}>
+                              {company.healthScore}
+                            </span>
+                          </TooltipTrigger>
+                          <TooltipContent className="max-w-xs">
+                            <p className="font-semibold mb-1">Score Breakdown</p>
+                            <div className="space-y-0.5 text-xs">
+                              {company.breakdown.map((b) => (
+                                <div key={b.field} className="flex justify-between gap-4">
+                                  <span className="text-muted-foreground capitalize">{b.field.replace(/([A-Z])/g, " $1")}</span>
+                                  <span>{b.fieldScore} × {b.weight}% = <span className="font-medium">{b.contribution}</span></span>
+                                </div>
+                              ))}
+                            </div>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TableCell>
+                      <TableCell>{getStatusBadge(company.status)}</TableCell>
+                      <TableCell className="text-right text-muted-foreground text-sm">
+                        {company.lastLogin}
+                      </TableCell>
+                    </TableRow>
+                  ))
                 )}
               </TableBody>
             </Table>

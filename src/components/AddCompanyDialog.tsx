@@ -1,10 +1,12 @@
-import { useState, useRef, useCallback, useMemo } from "react";
+import { useState, useRef, useCallback } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Upload, Building2, Plus, X, FileSpreadsheet, ArrowLeft, ToggleLeft, ToggleRight } from "lucide-react";
 import { toast } from "sonner";
+import CSVFieldMapper from "./CSVFieldMapper";
+import { useAddCompany, useBulkAddCompanies } from "@/hooks/useCompanies";
 
 interface CustomField {
   key: string;
@@ -15,19 +17,17 @@ interface CustomField {
 interface AddCompanyDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onAddCompany: (company: { name: string; industry: string; fields: CustomField[] }) => void;
-  onUploadCSV: (file: File) => void;
 }
 
-type Mode = "choose" | "manual" | "upload";
+type Mode = "choose" | "manual" | "upload" | "mapping";
 
 const calcDefaultWeight = (scoredCount: number) =>
   Math.round((100 / Math.max(scoredCount, 1)) * 10) / 10;
 
-const AddCompanyDialog = ({ open, onOpenChange, onAddCompany, onUploadCSV }: AddCompanyDialogProps) => {
+const AddCompanyDialog = ({ open, onOpenChange }: AddCompanyDialogProps) => {
   const [mode, setMode] = useState<Mode>("choose");
   const [name, setName] = useState("");
-  const initWeight = calcDefaultWeight(4); // industry + mrr + last_login + 1 custom
+  const initWeight = calcDefaultWeight(4);
   const [industry, setIndustry] = useState("");
   const [industryScored, setIndustryScored] = useState(true);
   const [industryWeight, setIndustryWeight] = useState(initWeight);
@@ -42,11 +42,11 @@ const AddCompanyDialog = ({ open, onOpenChange, onAddCompany, onUploadCSV }: Add
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Count scored fixed attributes
-  const scoredFixedCount = 1 + (industryScored ? 1 : 0) + (mrrScored ? 1 : 0); // last_login always scored
+  const addCompanyMutation = useAddCompany();
+  const bulkAddMutation = useBulkAddCompanies();
 
   const redistributeWeights = useCallback((customCount: number, indScored: boolean, mScored: boolean) => {
-    const total = 1 + (indScored ? 1 : 0) + (mScored ? 1 : 0) + customCount; // 1 = last_login
+    const total = 1 + (indScored ? 1 : 0) + (mScored ? 1 : 0) + customCount;
     const w = calcDefaultWeight(total);
     if (indScored) setIndustryWeight(w); else setIndustryWeight(0);
     if (mScored) setMrrWeight(w); else setMrrWeight(0);
@@ -63,7 +63,7 @@ const AddCompanyDialog = ({ open, onOpenChange, onAddCompany, onUploadCSV }: Add
     setEmail("");
     setMrr("");
     setLastLogin("");
-    const w = calcDefaultWeight(4); // last_login + industry + mrr + 1 custom
+    const w = calcDefaultWeight(4);
     setIndustryWeight(w);
     setMrrWeight(w);
     setLastLoginWeight(w);
@@ -100,15 +100,36 @@ const AddCompanyDialog = ({ open, onOpenChange, onAddCompany, onUploadCSV }: Add
     setCustomFields(updated);
   };
 
-  const handleManualSubmit = () => {
+  const handleManualSubmit = async () => {
     if (!name.trim()) {
       toast.error("Company name is required");
       return;
     }
+
+    const snapshotData: Record<string, any> = {};
+    if (mrr) snapshotData.mrr = Number(mrr) || 0;
+    if (lastLogin) snapshotData.lastLogin = lastLogin;
+    if (industry.trim()) snapshotData.industry = industry.trim();
+
     const validFields = customFields.filter((f) => f.key.trim() && f.value.trim());
-    onAddCompany({ name: name.trim(), industry: industry.trim(), fields: validFields });
-    toast.success(`${name.trim()} added successfully`);
-    handleOpenChange(false);
+    for (const f of validFields) {
+      const numVal = Number(f.value);
+      snapshotData[f.key.trim()] = isNaN(numVal) ? f.value.trim() : numVal;
+    }
+
+    try {
+      await addCompanyMutation.mutateAsync({
+        name: name.trim(),
+        industry: industry.trim(),
+        email: email.trim(),
+        snapshotData,
+        source: "manual",
+      });
+      toast.success(`${name.trim()} added successfully`);
+      handleOpenChange(false);
+    } catch (err) {
+      toast.error("Failed to add company");
+    }
   };
 
   const handleFileDrop = useCallback((e: React.DragEvent) => {
@@ -127,19 +148,33 @@ const AddCompanyDialog = ({ open, onOpenChange, onAddCompany, onUploadCSV }: Add
     if (file) setSelectedFile(file);
   };
 
-  const handleUploadSubmit = () => {
+  const handleProceedToMapping = () => {
     if (!selectedFile) {
       toast.error("Please select a file first");
       return;
     }
-    onUploadCSV(selectedFile);
-    toast.success(`Uploaded ${selectedFile.name} — processing companies...`);
-    handleOpenChange(false);
+    setMode("mapping");
+  };
+
+  const handleCSVMappingComplete = async (rows: Array<{
+    name: string;
+    industry: string;
+    email: string;
+    snapshotData: Record<string, any>;
+  }>) => {
+    try {
+      await bulkAddMutation.mutateAsync(
+        rows.map((r) => ({ ...r, source: "csv" }))
+      );
+      handleOpenChange(false);
+    } catch (err) {
+      toast.error("Import failed");
+    }
   };
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-lg bg-card border-border">
+      <DialogContent className={`bg-card border-border ${mode === "mapping" ? "sm:max-w-2xl" : "sm:max-w-lg"}`}>
         {mode === "choose" && (
           <>
             <DialogHeader>
@@ -191,7 +226,6 @@ const AddCompanyDialog = ({ open, onOpenChange, onAddCompany, onUploadCSV }: Add
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 mt-2 max-h-[60vh] overflow-y-auto pr-1">
-              {/* Default fields */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="company-name">Company Name *</Label>
@@ -203,7 +237,6 @@ const AddCompanyDialog = ({ open, onOpenChange, onAddCompany, onUploadCSV }: Add
                 </div>
               </div>
 
-              {/* Scored default attributes with weight */}
               <div className="space-y-3">
                 <Label className="text-muted-foreground text-xs uppercase tracking-wider">Scored Attributes</Label>
                 <div className="flex items-center gap-2 text-xs text-muted-foreground px-1">
@@ -212,7 +245,6 @@ const AddCompanyDialog = ({ open, onOpenChange, onAddCompany, onUploadCSV }: Add
                   <span className="flex-1">Value</span>
                   <span className="w-20 text-center">Weight</span>
                 </div>
-                {/* Industry */}
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => {
@@ -230,7 +262,6 @@ const AddCompanyDialog = ({ open, onOpenChange, onAddCompany, onUploadCSV }: Add
                   <Input placeholder="SaaS" value={industry} onChange={(e) => setIndustry(e.target.value)} className="flex-1" disabled={!industryScored} />
                   <Input type="number" min={0} value={industryWeight} onChange={(e) => setIndustryWeight(Number(e.target.value) || 0)} className="w-20 text-center" disabled={!industryScored} />
                 </div>
-                {/* MRR */}
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => {
@@ -248,7 +279,6 @@ const AddCompanyDialog = ({ open, onOpenChange, onAddCompany, onUploadCSV }: Add
                   <Input type="number" placeholder="12000" value={mrr} onChange={(e) => setMrr(e.target.value)} className="flex-1" />
                   <Input type="number" min={0} value={mrrWeight} onChange={(e) => setMrrWeight(Number(e.target.value) || 0)} className="w-20 text-center" disabled={!mrrScored} />
                 </div>
-                {/* Last Login */}
                 <div className="flex items-center gap-2">
                   <span className="w-6 flex items-center justify-center">
                     <ToggleRight className="h-5 w-5 text-primary opacity-50" />
@@ -259,7 +289,6 @@ const AddCompanyDialog = ({ open, onOpenChange, onAddCompany, onUploadCSV }: Add
                 </div>
               </div>
 
-              {/* Custom attributes with weight */}
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <Label>Custom Attributes</Label>
@@ -312,7 +341,14 @@ const AddCompanyDialog = ({ open, onOpenChange, onAddCompany, onUploadCSV }: Add
             </div>
             <div className="flex justify-end gap-3 mt-4">
               <Button variant="heroOutline" size="sm" onClick={() => handleOpenChange(false)}>Cancel</Button>
-              <Button variant="hero" size="sm" onClick={handleManualSubmit}>Add Company</Button>
+              <Button
+                variant="hero"
+                size="sm"
+                onClick={handleManualSubmit}
+                disabled={addCompanyMutation.isPending}
+              >
+                {addCompanyMutation.isPending ? "Adding…" : "Add Company"}
+              </Button>
             </div>
           </>
         )}
@@ -327,7 +363,7 @@ const AddCompanyDialog = ({ open, onOpenChange, onAddCompany, onUploadCSV }: Add
                 <DialogTitle className="text-xl">Upload Company List</DialogTitle>
               </div>
               <DialogDescription className="text-muted-foreground">
-                Upload a CSV or XLSX file with your companies. Include any custom columns for health scoring attributes.
+                Upload a CSV or XLSX file with your companies. You'll map columns to fields in the next step.
               </DialogDescription>
             </DialogHeader>
             <div className="mt-4 space-y-4">
@@ -380,15 +416,25 @@ const AddCompanyDialog = ({ open, onOpenChange, onAddCompany, onUploadCSV }: Add
                   <p>Globex Inc, Fintech, 8500, 45, ...</p>
                 </div>
                 <p className="text-xs text-muted-foreground mt-2">
-                  First row should be headers. Any extra columns become custom attributes.
+                  First row should be headers. You'll map columns to fields next.
                 </p>
               </div>
             </div>
             <div className="flex justify-end gap-3 mt-4">
               <Button variant="heroOutline" size="sm" onClick={() => handleOpenChange(false)}>Cancel</Button>
-              <Button variant="hero" size="sm" onClick={handleUploadSubmit} disabled={!selectedFile}>Upload & Import</Button>
+              <Button variant="hero" size="sm" onClick={handleProceedToMapping} disabled={!selectedFile}>
+                Next: Map Fields
+              </Button>
             </div>
           </>
+        )}
+
+        {mode === "mapping" && selectedFile && (
+          <CSVFieldMapper
+            file={selectedFile}
+            onComplete={handleCSVMappingComplete}
+            onBack={() => setMode("upload")}
+          />
         )}
       </DialogContent>
     </Dialog>
