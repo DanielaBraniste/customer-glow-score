@@ -23,7 +23,6 @@ export function useCompanies() {
     queryKey: ["companies", user?.id],
     enabled: !!user,
     queryFn: async (): Promise<CompanyWithSnapshot[]> => {
-      // Fetch companies
       const { data: companies, error: cErr } = await supabase
         .from("companies")
         .select("*")
@@ -32,8 +31,6 @@ export function useCompanies() {
       if (cErr) throw cErr;
       if (!companies?.length) return [];
 
-      // Fetch latest snapshot per company
-      // We get all snapshots and pick latest per company client-side
       const { data: snapshots, error: sErr } = await supabase
         .from("company_snapshots")
         .select("*")
@@ -65,6 +62,7 @@ export function useCompanies() {
   });
 }
 
+// Fix 6 & 7: orphan cleanup + duplicate detection for single add
 export function useAddCompany() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -78,6 +76,18 @@ export function useAddCompany() {
       source?: string;
     }) => {
       if (!user) throw new Error("Not authenticated");
+
+      // Fix 7: duplicate detection
+      const { data: existing } = await supabase
+        .from("companies")
+        .select("id")
+        .eq("user_id", user.id)
+        .ilike("name", input.name.trim())
+        .maybeSingle();
+
+      if (existing) {
+        throw new Error(`A company named "${input.name.trim()}" already exists`);
+      }
 
       const { data: company, error: cErr } = await supabase
         .from("companies")
@@ -96,7 +106,12 @@ export function useAddCompany() {
           data: input.snapshotData,
         });
 
-      if (sErr) throw sErr;
+      // Fix 6: clean up orphan on snapshot failure
+      if (sErr) {
+        await supabase.from("companies").delete().eq("id", company.id);
+        throw sErr;
+      }
+
       return company;
     },
     onSuccess: () => {
@@ -104,6 +119,9 @@ export function useAddCompany() {
     },
   });
 }
+
+// Fix 4, 5, 7: batch inserts, orphan cleanup, duplicate detection
+const BATCH_SIZE = 100;
 
 export function useBulkAddCompanies() {
   const { user } = useAuth();
@@ -119,36 +137,88 @@ export function useBulkAddCompanies() {
     }>) => {
       if (!user) throw new Error("Not authenticated");
 
-      let added = 0;
-      for (const row of rows) {
-        const { data: company, error: cErr } = await supabase
+      // Fix 7: fetch existing names for dedup
+      const { data: existingCompanies } = await supabase
+        .from("companies")
+        .select("name")
+        .eq("user_id", user.id);
+
+      const existingNames = new Set(
+        (existingCompanies || []).map((c) => c.name.toLowerCase().trim())
+      );
+
+      const newRows = rows.filter((r) => !existingNames.has(r.name.toLowerCase().trim()));
+      const skipped = rows.length - newRows.length;
+
+      let totalAdded = 0;
+
+      // Fix 4: batch inserts in chunks
+      for (let i = 0; i < newRows.length; i += BATCH_SIZE) {
+        const chunk = newRows.slice(i, i + BATCH_SIZE);
+
+        const companyInserts = chunk.map((row) => ({
+          user_id: user.id,
+          name: row.name,
+          industry: row.industry,
+          email: row.email || "",
+        }));
+
+        const { data: companies, error: cErr } = await supabase
           .from("companies")
-          .insert({ user_id: user.id, name: row.name, industry: row.industry, email: row.email || "" })
-          .select()
-          .single();
+          .insert(companyInserts)
+          .select();
 
         if (cErr) {
-          console.error("Failed to add company:", row.name, cErr);
+          console.error("Batch company insert failed:", cErr);
           continue;
         }
 
+        // Build name→company map for snapshot matching
+        const nameMap = new Map<string, typeof companies[0]>();
+        for (const c of companies) {
+          nameMap.set(c.name.toLowerCase().trim(), c);
+        }
+
+        const snapshotInserts = chunk
+          .map((row) => {
+            const company = nameMap.get(row.name.toLowerCase().trim());
+            if (!company) return null;
+            return {
+              company_id: company.id,
+              user_id: user.id,
+              source: row.source || "csv",
+              data: row.snapshotData,
+            };
+          })
+          .filter(Boolean) as Array<{
+            company_id: string;
+            user_id: string;
+            source: string;
+            data: Record<string, any>;
+          }>;
+
         const { error: sErr } = await supabase
           .from("company_snapshots")
-          .insert({
-            company_id: company.id,
-            user_id: user.id,
-            source: row.source || "csv",
-            data: row.snapshotData,
-          });
+          .insert(snapshotInserts);
 
-        if (sErr) console.error("Failed to add snapshot:", row.name, sErr);
-        else added++;
+        // Fix 5: clean up orphans if snapshot batch fails
+        if (sErr) {
+          console.error("Batch snapshot insert failed:", sErr);
+          const orphanIds = companies.map((c) => c.id);
+          await supabase.from("companies").delete().in("id", orphanIds);
+          continue;
+        }
+
+        totalAdded += companies.length;
       }
-      return { added, total: rows.length };
+
+      return { added: totalAdded, total: rows.length, skipped };
     },
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ["companies"] });
-      toast.success(`Imported ${result.added} of ${result.total} companies`);
+      const parts = [`Imported ${result.added} of ${result.total} companies`];
+      if (result.skipped > 0) parts.push(`(${result.skipped} duplicates skipped)`);
+      toast.success(parts.join(" "));
     },
   });
 }
