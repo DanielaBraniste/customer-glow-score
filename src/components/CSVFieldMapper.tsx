@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import Papa from "papaparse";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -49,12 +49,15 @@ const CSVFieldMapper = ({ file, onComplete, onBack }: CSVFieldMapperProps) => {
   const [mappings, setMappings] = useState<FieldMapping[]>([]);
   const [parsed, setParsed] = useState(false);
 
-  // Parse CSV on mount
-  useMemo(() => {
+  // Fix 1: Parse CSV as effect, not useMemo
+  useEffect(() => {
+    let cancelled = false;
+
     Papa.parse(file, {
       header: true,
       skipEmptyLines: true,
       complete: (result) => {
+        if (cancelled) return;
         const data = result.data as Record<string, string>[];
         const hdrs = result.meta.fields || [];
         setCsvData(data);
@@ -82,9 +85,11 @@ const CSVFieldMapper = ({ file, onComplete, onBack }: CSVFieldMapperProps) => {
         setParsed(true);
       },
       error: () => {
-        toast.error("Failed to parse CSV file");
+        if (!cancelled) toast.error("Failed to parse CSV file");
       },
     });
+
+    return () => { cancelled = true; };
   }, [file]);
 
   const updateMapping = (idx: number, value: string) => {

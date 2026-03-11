@@ -71,48 +71,73 @@ const Connectors = () => {
     setApiKeyInput("");
   };
 
+  // Fix 9 & 10: error handling, awaited import, TODO for plaintext keys
   const handleSaveConnection = async () => {
     if (!user || !connectDialog) return;
     if (!apiKeyInput.trim()) {
       toast.error("Please enter your API key");
       return;
     }
-    setSaving(true);
-    const existing = getConnectorStatus(connectDialog.id);
-    if (existing) {
-      await supabase
-        .from("user_connectors")
-        .update({ api_key: apiKeyInput.trim(), is_active: true, updated_at: new Date().toISOString() })
-        .eq("id", existing.id);
-    } else {
-      await supabase.from("user_connectors").insert({
-        user_id: user.id,
-        connector_id: connectDialog.id,
-        api_key: apiKeyInput.trim(),
-        is_active: true,
-      });
-    }
-    // Refresh
-    const { data } = await supabase
-      .from("user_connectors")
-      .select("id, connector_id, is_active, last_import_at")
-      .eq("user_id", user.id);
-    setUserConnectors(data || []);
-    setSaving(false);
-    setConnectDialog(null);
-    toast.success(`${connectDialog.name} connected! Running first import now…`);
 
-    // Trigger immediate import for this connector
-    supabase.functions.invoke("daily-import", {
-      body: { connector_id: connectDialog.id, user_id: user.id },
-    }).then(({ error }) => {
-      if (error) {
-        console.error("Immediate import failed:", error);
-        toast.error("First import failed — it will retry at 6 AM UTC.");
+    // Capture before clearing dialog
+    const connectorName = connectDialog.name;
+    const connectorId = connectDialog.id;
+
+    setSaving(true);
+    try {
+      const existing = getConnectorStatus(connectorId);
+
+      // TODO: API keys are stored as plaintext in user_connectors.
+      // For production, encrypt at rest using Supabase Vault (vault.create_secret)
+      // or pgcrypto (pgp_sym_encrypt) with a server-side key.
+      // See: https://supabase.com/docs/guides/database/vault
+
+      if (existing) {
+        const { error } = await supabase
+          .from("user_connectors")
+          .update({ api_key: apiKeyInput.trim(), is_active: true, updated_at: new Date().toISOString() })
+          .eq("id", existing.id);
+        if (error) throw error;
       } else {
-        toast.success("Initial data import complete!");
+        const { error } = await supabase.from("user_connectors").insert({
+          user_id: user.id,
+          connector_id: connectorId,
+          api_key: apiKeyInput.trim(),
+          is_active: true,
+        });
+        if (error) throw error;
       }
-    });
+
+      // Refresh connector list
+      const { data } = await supabase
+        .from("user_connectors")
+        .select("id, connector_id, is_active, last_import_at")
+        .eq("user_id", user.id);
+      setUserConnectors(data || []);
+      setConnectDialog(null);
+      toast.success(`${connectorName} connected! Running first import…`);
+
+      // Trigger immediate import and await it
+      try {
+        const { error } = await supabase.functions.invoke("daily-import", {
+          body: { connector_id: connectorId, user_id: user.id },
+        });
+        if (error) {
+          console.error("Immediate import failed:", error);
+          toast.error("First import failed — it will retry at 6 AM UTC.");
+        } else {
+          toast.success("Initial data import complete!");
+        }
+      } catch (importErr) {
+        console.error("Import invocation error:", importErr);
+        toast.error("First import failed — it will retry at 6 AM UTC.");
+      }
+    } catch (err: any) {
+      console.error("Save connection failed:", err);
+      toast.error(err?.message || "Failed to save connection");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleDisconnect = async (connectorId: string) => {

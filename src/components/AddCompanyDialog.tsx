@@ -8,6 +8,25 @@ import { toast } from "sonner";
 import CSVFieldMapper from "./CSVFieldMapper";
 import { useAddCompany, useBulkAddCompanies } from "@/hooks/useCompanies";
 
+// Fix 3: file size limit
+const MAX_FILE_SIZE_MB = 10;
+const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
+
+// Fix 2 & 3: shared validation helper
+const validateUploadFile = (file: File): string | null => {
+  const isCsv = file.type === "text/csv" || file.name.toLowerCase().endsWith(".csv");
+  if (!isCsv) {
+    return "Only CSV files are supported. XLSX support is coming soon.";
+  }
+  if (file.size > MAX_FILE_SIZE_BYTES) {
+    return `File is too large (${(file.size / 1024 / 1024).toFixed(1)} MB). Maximum size is ${MAX_FILE_SIZE_MB} MB.`;
+  }
+  if (file.size === 0) {
+    return "File is empty.";
+  }
+  return null;
+};
+
 interface CustomField {
   key: string;
   value: string;
@@ -127,25 +146,36 @@ const AddCompanyDialog = ({ open, onOpenChange }: AddCompanyDialogProps) => {
       });
       toast.success(`${name.trim()} added successfully`);
       handleOpenChange(false);
-    } catch (err) {
-      toast.error("Failed to add company");
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to add company");
     }
   };
 
+  // Fix 2 & 8: use shared validation in drag-and-drop
   const handleFileDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     setDragOver(false);
     const file = e.dataTransfer.files[0];
-    if (file && (file.type === "text/csv" || file.name.endsWith(".csv") || file.name.endsWith(".xlsx"))) {
-      setSelectedFile(file);
-    } else {
-      toast.error("Please upload a CSV or XLSX file");
+    if (!file) return;
+    const error = validateUploadFile(file);
+    if (error) {
+      toast.error(error);
+      return;
     }
+    setSelectedFile(file);
   }, []);
 
+  // Fix 8: use shared validation in file select
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) setSelectedFile(file);
+    if (!file) return;
+    const error = validateUploadFile(file);
+    if (error) {
+      toast.error(error);
+      e.target.value = "";
+      return;
+    }
+    setSelectedFile(file);
   };
 
   const handleProceedToMapping = () => {
@@ -363,7 +393,7 @@ const AddCompanyDialog = ({ open, onOpenChange }: AddCompanyDialogProps) => {
                 <DialogTitle className="text-xl">Upload Company List</DialogTitle>
               </div>
               <DialogDescription className="text-muted-foreground">
-                Upload a CSV or XLSX file with your companies. You'll map columns to fields in the next step.
+                Upload a CSV file with your companies. You'll map columns to fields in the next step.
               </DialogDescription>
             </DialogHeader>
             <div className="mt-4 space-y-4">
@@ -395,14 +425,14 @@ const AddCompanyDialog = ({ open, onOpenChange }: AddCompanyDialogProps) => {
                     <Upload className="h-10 w-10 text-muted-foreground" />
                     <div className="text-center">
                       <p className="font-medium text-sm">Drop your file here or click to browse</p>
-                      <p className="text-xs text-muted-foreground mt-1">Supports CSV and XLSX files</p>
+                      <p className="text-xs text-muted-foreground mt-1">Supports CSV files (max 10 MB)</p>
                     </div>
                   </>
                 )}
                 <input
                   ref={fileInputRef}
                   type="file"
-                  accept=".csv,.xlsx"
+                  accept=".csv"
                   onChange={handleFileSelect}
                   className="hidden"
                 />
