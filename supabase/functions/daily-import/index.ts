@@ -125,9 +125,135 @@ const importHandlers: Record<string, (apiKey: string, userId: string, supabase: 
     console.log(`[HubSpot] Imported ${imported} companies for user ${userId}`);
     return { records: imported };
   },
-  intercom: async (_apiKey, userId, _supabase) => {
-    console.log(`[Intercom] Import for user ${userId} — not yet implemented`);
-    return { records: 0 };
+  intercom: async (apiKey, userId, supabase) => {
+    const listUrl = "https://api.intercom.io/companies/list";
+    const headers = {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+      Accept: "application/json",
+    };
+
+    // 1. Paginate through all Intercom companies
+    const allCompanies: Array<Record<string, any>> = [];
+    let startingAfter: string | undefined;
+
+    do {
+      const body: Record<string, any> = { per_page: 50 };
+      if (startingAfter) body.starting_after = startingAfter;
+
+      const res = await fetch(listUrl, {
+        method: "POST",
+        headers,
+        body: JSON.stringify(body),
+      });
+
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(`Intercom API error ${res.status}: ${text}`);
+      }
+
+      const data = await res.json();
+      allCompanies.push(...(data.data || []));
+      startingAfter = data.pages?.next?.starting_after || undefined;
+    } while (startingAfter);
+
+    if (allCompanies.length === 0) {
+      console.log(`[Intercom] No companies found for user ${userId}`);
+      return { records: 0 };
+    }
+
+    // 2. Fetch existing companies for this user to match by name
+    const { data: existingCompanies } = await supabase
+      .from("companies")
+      .select("id, name")
+      .eq("user_id", userId);
+
+    const companyByName = new Map(
+      (existingCompanies || []).map((c: any) => [c.name.toLowerCase().trim(), c])
+    );
+
+    let imported = 0;
+
+    // 3. Process each Intercom company
+    for (const ic of allCompanies) {
+      const name = ic.name?.trim();
+      if (!name) continue;
+
+      let companyId: string;
+      const existing = companyByName.get(name.toLowerCase());
+
+      if (existing) {
+        companyId = existing.id;
+      } else {
+        const { data: newCompany, error: cErr } = await supabase
+          .from("companies")
+          .insert({
+            user_id: userId,
+            name,
+            industry: ic.industry || "",
+            email: "",
+          })
+          .select("id")
+          .single();
+
+        if (cErr) {
+          console.error(`[Intercom] Failed to create company "${name}":`, cErr.message);
+          continue;
+        }
+        companyId = newCompany.id;
+        companyByName.set(name.toLowerCase(), { id: companyId, name });
+      }
+
+      // Build snapshot data from Intercom fields
+      const snapshotData: Record<string, any> = {};
+
+      if (ic.monthly_spend != null) {
+        snapshotData.mrr = Number(ic.monthly_spend);
+      }
+      if (ic.session_count != null) {
+        snapshotData.usageScore = Math.min(100, Math.round((Number(ic.session_count) / 200) * 100));
+      }
+      if (ic.user_count != null) {
+        snapshotData.activeUsers = Number(ic.user_count);
+      }
+      if (ic.last_request_at) {
+        snapshotData.lastLogin = new Date(ic.last_request_at * 1000).toISOString().split("T")[0];
+      }
+      if (ic.plan?.name) {
+        snapshotData.plan = ic.plan.name;
+      }
+      // Pull in any custom attributes
+      if (ic.custom_attributes) {
+        for (const [key, value] of Object.entries(ic.custom_attributes)) {
+          if (value != null && value !== "") {
+            const snakeKey = key.replace(/\s+/g, "_").toLowerCase();
+            snapshotData[snakeKey] = value;
+          }
+        }
+      }
+
+      // Upsert snapshot
+      const { error: sErr } = await supabase
+        .from("company_snapshots")
+        .upsert(
+          {
+            company_id: companyId,
+            user_id: userId,
+            source: "intercom",
+            data: snapshotData,
+          },
+          { onConflict: "company_id,snapshot_date" }
+        );
+
+      if (sErr) {
+        console.error(`[Intercom] Failed to upsert snapshot for "${name}":`, sErr.message);
+        continue;
+      }
+      imported++;
+    }
+
+    console.log(`[Intercom] Imported ${imported} companies for user ${userId}`);
+    return { records: imported };
   },
   salesforce: async (_apiKey, userId, _supabase) => {
     console.log(`[Salesforce] Import for user ${userId} — not yet implemented`);
