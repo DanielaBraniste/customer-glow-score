@@ -1,6 +1,6 @@
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Database, Calendar, Filter, Settings2, Plus, X, GripVertical } from "lucide-react";
+import { ArrowLeft, Database, Calendar, Filter, Settings2, Plus, X, GripVertical, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -11,11 +11,13 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/co
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 interface FieldConfig {
   key: string;
@@ -38,26 +40,26 @@ const defaultFields: FieldConfig[] = [
   { key: "usageScore", label: "Usage Score", weight: 25, enabled: true, type: "number", align: "right" },
 ];
 
-// Mock raw import data
-const mockRawData = [
-  { id: 1, date: "2026-03-08", company: "Acme Corp", source: "HubSpot", mrr: 12000, nps: 72, lastLogin: "2026-03-07", supportTickets: 2, contractEnd: "2026-12-01", usageScore: 88, industry: "SaaS" },
-  { id: 2, date: "2026-03-08", company: "Globex Inc", source: "Intercom", mrr: 8500, nps: 45, lastLogin: "2026-02-20", supportTickets: 8, contractEnd: "2026-06-15", usageScore: 52, industry: "Fintech" },
-  { id: 3, date: "2026-03-08", company: "Initech", source: "CSV", mrr: 24000, nps: 91, lastLogin: "2026-03-08", supportTickets: 0, contractEnd: "2027-03-01", usageScore: 95, industry: "Enterprise" },
-  { id: 4, date: "2026-03-08", company: "Umbrella Co", source: "Salesforce", mrr: 5200, nps: 28, lastLogin: "2026-01-15", supportTickets: 14, contractEnd: "2026-04-01", usageScore: 31, industry: "Healthcare" },
-  { id: 5, date: "2026-03-08", company: "Stark Industries", source: "Stripe", mrr: 18000, nps: 67, lastLogin: "2026-03-07", supportTickets: 3, contractEnd: "2026-09-15", usageScore: 76, industry: "Manufacturing" },
-  { id: 6, date: "2026-03-08", company: "Wayne Enterprises", source: "HubSpot", mrr: 15000, nps: 58, lastLogin: "2026-03-05", supportTickets: 5, contractEnd: "2026-11-01", usageScore: 69, industry: "Conglomerate" },
-  { id: 7, date: "2026-03-07", company: "Acme Corp", source: "HubSpot", mrr: 12000, nps: 70, lastLogin: "2026-03-06", supportTickets: 3, contractEnd: "2026-12-01", usageScore: 85, industry: "SaaS" },
-  { id: 8, date: "2026-03-07", company: "Globex Inc", source: "Intercom", mrr: 8500, nps: 47, lastLogin: "2026-02-18", supportTickets: 7, contractEnd: "2026-06-15", usageScore: 54, industry: "Fintech" },
-  { id: 9, date: "2026-03-07", company: "Umbrella Co", source: "Salesforce", mrr: 5200, nps: 30, lastLogin: "2026-01-12", supportTickets: 12, contractEnd: "2026-04-01", usageScore: 33, industry: "Healthcare" },
-  { id: 10, date: "2026-03-06", company: "Stark Industries", source: "Stripe", mrr: 18000, nps: 65, lastLogin: "2026-03-05", supportTickets: 4, contractEnd: "2026-09-15", usageScore: 74, industry: "Manufacturing" },
-];
+const SOURCE_LABELS: Record<string, string> = {
+  manual: "Manual",
+  csv: "CSV",
+  hubspot: "HubSpot",
+  intercom: "Intercom",
+  salesforce: "Salesforce",
+  zendesk: "Zendesk",
+  pipedrive: "Pipedrive",
+  stripe: "Stripe",
+  segment: "Segment",
+  slack: "Slack",
+};
 
-const allDates = [...new Set(mockRawData.map((r) => r.date))].sort().reverse();
-const allSources = [...new Set(mockRawData.map((r) => r.source))].sort();
+const getSourceLabel = (source: string): string =>
+  SOURCE_LABELS[source] || source.charAt(0).toUpperCase() + source.slice(1);
+
+const KNOWN_NON_METRIC_KEYS = new Set(["id", "date", "company", "industry", "source"]);
 
 const getValueColor = (key: string, val: number) => {
   if (key === "nps") {
-    // NPS range: -100 to 100. >50 great, 0–50 ok, <0 bad
     if (val > 50) return "text-primary";
     if (val >= 0) return "text-yellow-400";
     return "text-destructive";
@@ -85,6 +87,76 @@ const RawData = () => {
   const [newFieldName, setNewFieldName] = useState("");
   const [newFieldType, setNewFieldType] = useState<"number" | "date" | "text">("number");
   const [addDialogOpen, setAddDialogOpen] = useState(false);
+
+  const { data: snapshots, isLoading } = useQuery({
+    queryKey: ["raw-snapshots", user?.id],
+    enabled: !!user,
+    queryFn: async () => {
+      const { data: snaps, error: sErr } = await supabase
+        .from("company_snapshots")
+        .select("id, company_id, snapshot_date, source, data, created_at")
+        .eq("user_id", user!.id)
+        .order("snapshot_date", { ascending: false });
+
+      if (sErr) throw sErr;
+
+      const { data: companies, error: cErr } = await supabase
+        .from("companies")
+        .select("id, name, industry")
+        .eq("user_id", user!.id);
+
+      if (cErr) throw cErr;
+
+      const companyMap = new Map(companies?.map((c) => [c.id, c]) || []);
+
+      return (snaps || []).map((s) => {
+        const company = companyMap.get(s.company_id);
+        return {
+          id: s.id,
+          date: s.snapshot_date,
+          company: company?.name || "Unknown",
+          industry: company?.industry || "",
+          source: s.source || "manual",
+          ...((s.data as Record<string, any>) || {}),
+        };
+      });
+    },
+  });
+
+  const rows = snapshots || [];
+  const allDates = useMemo(() => [...new Set(rows.map((r) => r.date))].sort().reverse(), [rows]);
+  const allSources = useMemo(() => [...new Set(rows.map((r) => r.source))].sort(), [rows]);
+
+  const discoveredKeys = useMemo(() => {
+    const keys = new Set<string>();
+    for (const row of rows) {
+      Object.keys(row).forEach((k) => {
+        if (!KNOWN_NON_METRIC_KEYS.has(k)) {
+          keys.add(k);
+        }
+      });
+    }
+    return keys;
+  }, [rows]);
+
+  useEffect(() => {
+    if (discoveredKeys.size === 0) return;
+    setFields((prev) => {
+      const existingKeys = new Set(prev.map((f) => f.key));
+      const newFields = [...discoveredKeys]
+        .filter((k) => !existingKeys.has(k))
+        .map((k) => ({
+          key: k,
+          label: k.replace(/([A-Z])/g, " $1").replace(/^./, (s) => s.toUpperCase()),
+          weight: 10,
+          enabled: true,
+          type: "text" as const,
+          align: "left" as const,
+          isCustom: true,
+        }));
+      return newFields.length > 0 ? [...prev, ...newFields] : prev;
+    });
+  }, [discoveredKeys]);
 
   const enabledFields = fields.filter((f) => f.enabled);
   const totalWeight = enabledFields.reduce((sum, f) => sum + f.weight, 0);
@@ -127,7 +199,7 @@ const RawData = () => {
     toast.success("Field added");
   };
 
-  const filtered = mockRawData.filter((r) => {
+  const filtered = rows.filter((r) => {
     if (search && !r.company.toLowerCase().includes(search.toLowerCase())) return false;
     if (dateFilter !== "all" && r.date !== dateFilter) return false;
     if (sourceFilter !== "all" && r.source !== sourceFilter) return false;
@@ -193,7 +265,7 @@ const RawData = () => {
             <SelectContent>
               <SelectItem value="all">All Sources</SelectItem>
               {allSources.map((s) => (
-                <SelectItem key={s} value={s}>{s}</SelectItem>
+                <SelectItem key={s} value={s}>{getSourceLabel(s)}</SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -346,38 +418,47 @@ const RawData = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filtered.map((row) => (
-                  <TableRow key={row.id}>
-                    <TableCell className="sticky left-0 bg-card text-muted-foreground text-xs font-mono">{row.date}</TableCell>
-                    <TableCell className="sticky left-[100px] bg-card font-medium">{row.company}</TableCell>
-                    <TableCell>
-                      <span className="inline-flex items-center rounded-full bg-secondary px-2 py-0.5 text-xs font-medium text-secondary-foreground">
-                        {row.source}
-                      </span>
+                {isLoading ? (
+                  <TableRow>
+                    <TableCell colSpan={4 + enabledFields.length} className="text-center py-12">
+                      <Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" />
                     </TableCell>
-                    <TableCell className="text-muted-foreground">{row.industry}</TableCell>
-                    {enabledFields.map((field) => {
-                      const val = (row as Record<string, any>)[field.key];
-                      const colorClass = typeof val === "number" ? getValueColor(field.key, val) : "";
-                      return (
-                        <TableCell
-                          key={field.key}
-                          className={`${field.align === "right" ? "text-right" : ""} ${
-                            typeof val === "number" ? "font-semibold" : "text-muted-foreground text-xs font-mono"
-                          } ${colorClass}`}
-                        >
-                          {getCellValue(row, field.key)}
-                        </TableCell>
-                      );
-                    })}
                   </TableRow>
-                ))}
-                {filtered.length === 0 && (
+                ) : filtered.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={4 + enabledFields.length} className="text-center text-muted-foreground py-12">
-                      No records found matching your filters.
+                      {rows.length === 0
+                        ? "No import data yet. Add companies manually, upload a CSV, or connect an integration."
+                        : "No records found matching your filters."}
                     </TableCell>
                   </TableRow>
+                ) : (
+                  filtered.map((row) => (
+                    <TableRow key={row.id}>
+                      <TableCell className="sticky left-0 bg-card text-muted-foreground text-xs font-mono">{row.date}</TableCell>
+                      <TableCell className="sticky left-[100px] bg-card font-medium">{row.company}</TableCell>
+                      <TableCell>
+                        <span className="inline-flex items-center rounded-full bg-secondary px-2 py-0.5 text-xs font-medium text-secondary-foreground">
+                          {getSourceLabel(row.source)}
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">{row.industry}</TableCell>
+                      {enabledFields.map((field) => {
+                        const val = (row as Record<string, any>)[field.key];
+                        const colorClass = typeof val === "number" ? getValueColor(field.key, val) : "";
+                        return (
+                          <TableCell
+                            key={field.key}
+                            className={`${field.align === "right" ? "text-right" : ""} ${
+                              typeof val === "number" ? "font-semibold" : "text-muted-foreground text-xs font-mono"
+                            } ${colorClass}`}
+                          >
+                            {getCellValue(row, field.key)}
+                          </TableCell>
+                        );
+                      })}
+                    </TableRow>
+                  ))
                 )}
               </TableBody>
             </Table>
