@@ -147,6 +147,8 @@ const Dashboard = () => {
             onOpenChange={setAddDialogOpen}
           />
 
+          <DeduplicateBanner />
+
           {/* Table */}
           <div className="rounded-xl border border-border bg-card overflow-hidden">
             <Table>
