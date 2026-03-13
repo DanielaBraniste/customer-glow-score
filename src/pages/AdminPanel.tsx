@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -10,11 +10,69 @@ import {
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Lock, Users, Eye, Trash2, Shield, ArrowLeft, Zap, FileText } from "lucide-react";
+import { Lock, Users, Eye, Trash2, Shield, ArrowLeft, Zap, FileText, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { format } from "date-fns";
 
+// ── Sort utilities ──────────────────────────────────────────────
+type SortDirection = "asc" | "desc" | null;
+interface SortConfig { key: string; direction: SortDirection; }
+
+const handleSortToggle = (prev: SortConfig, key: string): SortConfig => {
+  if (prev.key !== key) return { key, direction: "asc" };
+  if (prev.direction === "asc") return { key, direction: "desc" };
+  if (prev.direction === "desc") return { key: "", direction: null };
+  return { key, direction: "asc" };
+};
+
+const sortRows = <T extends Record<string, any>>(rows: T[], config: SortConfig): T[] => {
+  if (!config.key || !config.direction) return rows;
+  return [...rows].sort((a, b) => {
+    let aVal = a[config.key];
+    let bVal = b[config.key];
+    if (aVal == null && bVal == null) return 0;
+    if (aVal == null) return 1;
+    if (bVal == null) return -1;
+    if (typeof aVal === "number" && typeof bVal === "number") {
+      return config.direction === "asc" ? aVal - bVal : bVal - aVal;
+    }
+    if (typeof aVal === "boolean") aVal = aVal ? 1 : 0;
+    if (typeof bVal === "boolean") bVal = bVal ? 1 : 0;
+    if (typeof aVal === "number" && typeof bVal === "number") {
+      return config.direction === "asc" ? aVal - bVal : bVal - aVal;
+    }
+    aVal = String(aVal).toLowerCase();
+    bVal = String(bVal).toLowerCase();
+    if (aVal < bVal) return config.direction === "asc" ? -1 : 1;
+    if (aVal > bVal) return config.direction === "asc" ? 1 : -1;
+    return 0;
+  });
+};
+
+const SortableHead = ({
+  label, sortKey, currentSort, onSort, className = "",
+}: {
+  label: string; sortKey: string; currentSort: SortConfig; onSort: (key: string) => void; className?: string;
+}) => {
+  const isActive = currentSort.key === sortKey;
+  const Icon = isActive
+    ? currentSort.direction === "asc" ? ArrowUp : ArrowDown
+    : ArrowUpDown;
+  return (
+    <TableHead className={className}>
+      <button
+        onClick={() => onSort(sortKey)}
+        className={`flex items-center gap-1 hover:text-foreground transition-colors px-1 py-0.5 rounded ${className?.includes("text-right") ? "ml-auto" : "-ml-1"}`}
+      >
+        <span>{label}</span>
+        <Icon className={`h-3 w-3 shrink-0 ${isActive ? "text-foreground" : "text-muted-foreground/40"}`} />
+      </button>
+    </TableHead>
+  );
+};
+
+// ── Types ───────────────────────────────────────────────────────
 interface UserData {
   id: string;
   email: string;
@@ -78,6 +136,11 @@ const AdminPanel = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState<UserData | null>(null);
 
+  // Sort states for each table
+  const [sortUsers, setSortUsers] = useState<SortConfig>({ key: "", direction: null });
+  const [sortConnectors, setSortConnectors] = useState<SortConfig>({ key: "", direction: null });
+  const [sortImports, setSortImports] = useState<SortConfig>({ key: "", direction: null });
+
   const handleLogin = async () => {
     setLoading(true);
     try {
@@ -104,6 +167,8 @@ const AdminPanel = () => {
   };
 
   const handleViewUser = async (user: UserData) => {
+    setSortConnectors({ key: "", direction: null });
+    setSortImports({ key: "", direction: null });
     try {
       const data = await callAdmin(password, "get-user", { userId: user.id });
       setSelectedUser(data.user);
@@ -154,6 +219,10 @@ const AdminPanel = () => {
     }
   };
 
+  const handleSortUsers = (key: string) => setSortUsers((prev) => handleSortToggle(prev, key));
+  const handleSortConnectors = (key: string) => setSortConnectors((prev) => handleSortToggle(prev, key));
+  const handleSortImports = (key: string) => setSortImports((prev) => handleSortToggle(prev, key));
+
   if (!authenticated) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center px-6">
@@ -183,6 +252,9 @@ const AdminPanel = () => {
   }
 
   if (selectedUser) {
+    const sortedConnectors = sortRows(selectedUser.connectors, sortConnectors);
+    const sortedImports = sortRows(selectedUser.import_logs, sortImports);
+
     return (
       <div className="min-h-screen bg-background px-6 py-8">
         <div className="max-w-5xl mx-auto">
@@ -270,14 +342,14 @@ const AdminPanel = () => {
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead>Connector</TableHead>
-                          <TableHead>Status</TableHead>
-                          <TableHead>Last Import</TableHead>
+                          <SortableHead label="Connector" sortKey="connector_id" currentSort={sortConnectors} onSort={handleSortConnectors} />
+                          <SortableHead label="Status" sortKey="is_active" currentSort={sortConnectors} onSort={handleSortConnectors} />
+                          <SortableHead label="Last Import" sortKey="last_import_at" currentSort={sortConnectors} onSort={handleSortConnectors} />
                           <TableHead>Actions</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {selectedUser.connectors.map((c) => (
+                        {sortedConnectors.map((c) => (
                           <TableRow key={c.id}>
                             <TableCell className="font-medium capitalize">{c.connector_id}</TableCell>
                             <TableCell>
@@ -315,15 +387,15 @@ const AdminPanel = () => {
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead>Connector</TableHead>
-                          <TableHead>Status</TableHead>
-                          <TableHead>Records</TableHead>
-                          <TableHead>Started</TableHead>
-                          <TableHead>Error</TableHead>
+                          <SortableHead label="Connector" sortKey="connector_id" currentSort={sortImports} onSort={handleSortImports} />
+                          <SortableHead label="Status" sortKey="status" currentSort={sortImports} onSort={handleSortImports} />
+                          <SortableHead label="Records" sortKey="records_imported" currentSort={sortImports} onSort={handleSortImports} />
+                          <SortableHead label="Started" sortKey="started_at" currentSort={sortImports} onSort={handleSortImports} />
+                          <SortableHead label="Error" sortKey="error_message" currentSort={sortImports} onSort={handleSortImports} />
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {selectedUser.import_logs.map((log) => (
+                        {sortedImports.map((log) => (
                           <TableRow key={log.id}>
                             <TableCell className="font-medium capitalize">{log.connector_id}</TableCell>
                             <TableCell>
@@ -367,6 +439,17 @@ const AdminPanel = () => {
     );
   }
 
+  // Flatten user data for sorting
+  const sortableUsers = users.map((u) => ({
+    ...u,
+    username: u.profile?.username || "",
+    company: u.profile?.company || "",
+    plan: u.profile?.plan || "free",
+    connectorsCount: u.connectors.length,
+    importsCount: u.import_logs.length,
+  }));
+  const sortedUsers = sortRows(sortableUsers, sortUsers);
+
   return (
     <div className="min-h-screen bg-background px-6 py-8">
       <div className="max-w-6xl mx-auto">
@@ -390,19 +473,19 @@ const AdminPanel = () => {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Username</TableHead>
-                  <TableHead>Company</TableHead>
-                  <TableHead>Plan</TableHead>
-                  <TableHead>Connectors</TableHead>
-                  <TableHead>Imports</TableHead>
-                  <TableHead>Joined</TableHead>
-                  <TableHead>Last Active</TableHead>
+                  <SortableHead label="Email" sortKey="email" currentSort={sortUsers} onSort={handleSortUsers} />
+                  <SortableHead label="Username" sortKey="username" currentSort={sortUsers} onSort={handleSortUsers} />
+                  <SortableHead label="Company" sortKey="company" currentSort={sortUsers} onSort={handleSortUsers} />
+                  <SortableHead label="Plan" sortKey="plan" currentSort={sortUsers} onSort={handleSortUsers} />
+                  <SortableHead label="Connectors" sortKey="connectorsCount" currentSort={sortUsers} onSort={handleSortUsers} />
+                  <SortableHead label="Imports" sortKey="importsCount" currentSort={sortUsers} onSort={handleSortUsers} />
+                  <SortableHead label="Joined" sortKey="created_at" currentSort={sortUsers} onSort={handleSortUsers} />
+                  <SortableHead label="Last Active" sortKey="last_sign_in_at" currentSort={sortUsers} onSort={handleSortUsers} />
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {users.map((user) => (
+                {sortedUsers.map((user) => (
                   <TableRow key={user.id}>
                     <TableCell className="font-medium">{user.email}</TableCell>
                     <TableCell className="text-muted-foreground">{user.profile?.username || "—"}</TableCell>

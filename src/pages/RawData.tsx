@@ -1,6 +1,6 @@
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Database, Calendar, Filter, Settings2, Plus, X, GripVertical, Loader2 } from "lucide-react";
+import { ArrowLeft, Database, Calendar, Filter, Settings2, Plus, X, GripVertical, Loader2, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -19,6 +19,59 @@ import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
+// ── Sort utilities ──────────────────────────────────────────────
+type SortDirection = "asc" | "desc" | null;
+interface SortConfig { key: string; direction: SortDirection; }
+
+const handleSortToggle = (prev: SortConfig, key: string): SortConfig => {
+  if (prev.key !== key) return { key, direction: "asc" };
+  if (prev.direction === "asc") return { key, direction: "desc" };
+  if (prev.direction === "desc") return { key: "", direction: null };
+  return { key, direction: "asc" };
+};
+
+const sortRows = <T extends Record<string, any>>(rows: T[], config: SortConfig): T[] => {
+  if (!config.key || !config.direction) return rows;
+  return [...rows].sort((a, b) => {
+    let aVal = a[config.key];
+    let bVal = b[config.key];
+    if (aVal == null && bVal == null) return 0;
+    if (aVal == null) return 1;
+    if (bVal == null) return -1;
+    if (typeof aVal === "number" && typeof bVal === "number") {
+      return config.direction === "asc" ? aVal - bVal : bVal - aVal;
+    }
+    aVal = String(aVal).toLowerCase();
+    bVal = String(bVal).toLowerCase();
+    if (aVal < bVal) return config.direction === "asc" ? -1 : 1;
+    if (aVal > bVal) return config.direction === "asc" ? 1 : -1;
+    return 0;
+  });
+};
+
+const SortableHead = ({
+  label, sortKey, currentSort, onSort, className = "",
+}: {
+  label: string; sortKey: string; currentSort: SortConfig; onSort: (key: string) => void; className?: string;
+}) => {
+  const isActive = currentSort.key === sortKey;
+  const Icon = isActive
+    ? currentSort.direction === "asc" ? ArrowUp : ArrowDown
+    : ArrowUpDown;
+  return (
+    <TableHead className={className}>
+      <button
+        onClick={() => onSort(sortKey)}
+        className={`flex items-center gap-1 hover:text-foreground transition-colors px-1 py-0.5 rounded ${className?.includes("text-right") ? "ml-auto" : "-ml-1"}`}
+      >
+        <span>{label}</span>
+        <Icon className={`h-3 w-3 shrink-0 ${isActive ? "text-foreground" : "text-muted-foreground/40"}`} />
+      </button>
+    </TableHead>
+  );
+};
+
+// ── Field & source config ───────────────────────────────────────
 interface FieldConfig {
   key: string;
   label: string;
@@ -87,6 +140,7 @@ const RawData = () => {
   const [newFieldName, setNewFieldName] = useState("");
   const [newFieldType, setNewFieldType] = useState<"number" | "date" | "text">("number");
   const [addDialogOpen, setAddDialogOpen] = useState(false);
+  const [sort, setSort] = useState<SortConfig>({ key: "", direction: null });
 
   const { data: snapshots, isLoading } = useQuery({
     queryKey: ["raw-snapshots", user?.id],
@@ -199,12 +253,17 @@ const RawData = () => {
     toast.success("Field added");
   };
 
-  const filtered = rows.filter((r) => {
-    if (search && !r.company.toLowerCase().includes(search.toLowerCase())) return false;
-    if (dateFilter !== "all" && r.date !== dateFilter) return false;
-    if (sourceFilter !== "all" && r.source !== sourceFilter) return false;
-    return true;
-  });
+  const handleSort = (key: string) => setSort((prev) => handleSortToggle(prev, key));
+
+  const filtered = sortRows(
+    rows.filter((r) => {
+      if (search && !r.company.toLowerCase().includes(search.toLowerCase())) return false;
+      if (dateFilter !== "all" && r.date !== dateFilter) return false;
+      if (sourceFilter !== "all" && r.source !== sourceFilter) return false;
+      return true;
+    }),
+    sort
+  );
 
   const getCellValue = (row: Record<string, any>, key: string) => {
     const val = row[key];
@@ -403,16 +462,26 @@ const RawData = () => {
             <Table>
               <TableHeader>
                 <TableRow className="hover:bg-transparent">
-                  <TableHead className="sticky left-0 bg-card z-10">Date</TableHead>
-                  <TableHead className="sticky left-[100px] bg-card z-10">Company</TableHead>
-                  <TableHead>Source</TableHead>
-                  <TableHead>Industry</TableHead>
+                  <SortableHead label="Date" sortKey="date" currentSort={sort} onSort={handleSort} className="sticky left-0 bg-card z-10" />
+                  <SortableHead label="Company" sortKey="company" currentSort={sort} onSort={handleSort} className="sticky left-[100px] bg-card z-10" />
+                  <SortableHead label="Source" sortKey="source" currentSort={sort} onSort={handleSort} />
+                  <SortableHead label="Industry" sortKey="industry" currentSort={sort} onSort={handleSort} />
                   {enabledFields.map((field) => (
                     <TableHead key={field.key} className={field.align === "right" ? "text-right" : ""}>
-                      <div className="flex flex-col gap-0.5">
-                        <span>{field.label}</span>
+                      <button
+                        onClick={() => handleSort(field.key)}
+                        className="flex flex-col gap-0.5 hover:text-foreground transition-colors"
+                      >
+                        <span className="flex items-center gap-1">
+                          {field.label}
+                          {sort.key === field.key ? (
+                            sort.direction === "asc" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
+                          ) : (
+                            <ArrowUpDown className="h-3 w-3 text-muted-foreground/40" />
+                          )}
+                        </span>
                         <span className="text-[10px] font-normal text-muted-foreground/70">{field.weight}%</span>
-                      </div>
+                      </button>
                     </TableHead>
                   ))}
                 </TableRow>
