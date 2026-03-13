@@ -1,7 +1,7 @@
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
-import { LogOut, Plus, Search, Building2, TrendingUp, TrendingDown, Minus, Database, Loader2 } from "lucide-react";
+import { LogOut, Plus, Search, Building2, TrendingUp, TrendingDown, Minus, Database, Loader2, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { Zap } from "lucide-react";
 import UserProfile from "@/components/UserProfile";
 import { Input } from "@/components/ui/input";
@@ -17,6 +17,59 @@ import {
 } from "@/components/ui/tooltip";
 import { useCompanies } from "@/hooks/useCompanies";
 
+// ── Sort utilities ──────────────────────────────────────────────
+type SortDirection = "asc" | "desc" | null;
+interface SortConfig { key: string; direction: SortDirection; }
+
+const handleSortToggle = (prev: SortConfig, key: string): SortConfig => {
+  if (prev.key !== key) return { key, direction: "asc" };
+  if (prev.direction === "asc") return { key, direction: "desc" };
+  if (prev.direction === "desc") return { key: "", direction: null };
+  return { key, direction: "asc" };
+};
+
+const sortRows = <T extends Record<string, any>>(rows: T[], config: SortConfig): T[] => {
+  if (!config.key || !config.direction) return rows;
+  return [...rows].sort((a, b) => {
+    let aVal = a[config.key];
+    let bVal = b[config.key];
+    if (aVal == null && bVal == null) return 0;
+    if (aVal == null) return 1;
+    if (bVal == null) return -1;
+    if (typeof aVal === "number" && typeof bVal === "number") {
+      return config.direction === "asc" ? aVal - bVal : bVal - aVal;
+    }
+    aVal = String(aVal).toLowerCase();
+    bVal = String(bVal).toLowerCase();
+    if (aVal < bVal) return config.direction === "asc" ? -1 : 1;
+    if (aVal > bVal) return config.direction === "asc" ? 1 : -1;
+    return 0;
+  });
+};
+
+const SortableHead = ({
+  label, sortKey, currentSort, onSort, className = "",
+}: {
+  label: string; sortKey: string; currentSort: SortConfig; onSort: (key: string) => void; className?: string;
+}) => {
+  const isActive = currentSort.key === sortKey;
+  const Icon = isActive
+    ? currentSort.direction === "asc" ? ArrowUp : ArrowDown
+    : ArrowUpDown;
+  return (
+    <TableHead className={className}>
+      <button
+        onClick={() => onSort(sortKey)}
+        className={`flex items-center gap-1 hover:text-foreground transition-colors px-1 py-0.5 rounded ${className?.includes("text-right") ? "ml-auto" : "-ml-1"}`}
+      >
+        <span>{label}</span>
+        <Icon className={`h-3 w-3 shrink-0 ${isActive ? "text-foreground" : "text-muted-foreground/40"}`} />
+      </button>
+    </TableHead>
+  );
+};
+
+// ── Dashboard helpers ───────────────────────────────────────────
 const getStatus = (score: number) => {
   if (score >= 80) return "Healthy";
   if (score >= 60) return "Monitor";
@@ -49,6 +102,7 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [addDialogOpen, setAddDialogOpen] = useState(false);
+  const [sort, setSort] = useState<SortConfig>({ key: "", direction: null });
 
   const { data: rawCompanies = [], isLoading } = useCompanies();
 
@@ -79,8 +133,11 @@ const Dashboard = () => {
     navigate("/");
   };
 
-  const filtered = companies.filter((c) =>
-    c.name.toLowerCase().includes(search.toLowerCase())
+  const handleSort = (key: string) => setSort((prev) => handleSortToggle(prev, key));
+
+  const filtered = sortRows(
+    companies.filter((c) => c.name.toLowerCase().includes(search.toLowerCase())),
+    sort
   );
 
   return (
@@ -154,11 +211,11 @@ const Dashboard = () => {
             <Table>
               <TableHeader>
                 <TableRow className="hover:bg-transparent">
-                  <TableHead>Company</TableHead>
-                  <TableHead>Industry</TableHead>
-                  <TableHead>Health Score</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Last Login</TableHead>
+                  <SortableHead label="Company" sortKey="name" currentSort={sort} onSort={handleSort} />
+                  <SortableHead label="Industry" sortKey="industry" currentSort={sort} onSort={handleSort} />
+                  <SortableHead label="Health Score" sortKey="healthScore" currentSort={sort} onSort={handleSort} />
+                  <SortableHead label="Status" sortKey="healthScore" currentSort={sort} onSort={handleSort} />
+                  <SortableHead label="Last Login" sortKey="lastLogin" currentSort={sort} onSort={handleSort} className="text-right" />
                 </TableRow>
               </TableHeader>
               <TableBody>
