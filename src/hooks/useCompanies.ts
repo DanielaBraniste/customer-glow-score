@@ -222,3 +222,187 @@ export function useBulkAddCompanies() {
     },
   });
 }
+
+// --- Deduplication ---
+
+export interface DuplicateGroup {
+  name: string;
+  primary: Company;
+  duplicates: Company[];
+  totalSnapshots: number;
+  conflictingDates: number;
+}
+
+export function useDuplicateCompanies() {
+  const { user } = useAuth();
+
+  return useQuery({
+    queryKey: ["duplicate-companies", user?.id],
+    enabled: !!user,
+    queryFn: async (): Promise<DuplicateGroup[]> => {
+      const { data: companies, error: cErr } = await supabase
+        .from("companies")
+        .select("*")
+        .eq("user_id", user!.id)
+        .order("created_at", { ascending: true });
+
+      if (cErr) throw cErr;
+      if (!companies?.length) return [];
+
+      const groups = new Map<string, typeof companies>();
+      for (const c of companies) {
+        const key = c.name.toLowerCase().trim();
+        if (!groups.has(key)) groups.set(key, []);
+        groups.get(key)!.push(c);
+      }
+
+      const duplicateGroups = [...groups.entries()].filter(([, members]) => members.length > 1);
+      if (duplicateGroups.length === 0) return [];
+
+      const allCompanyIds = duplicateGroups.flatMap(([, members]) => members.map((m) => m.id));
+      const { data: snapshots } = await supabase
+        .from("company_snapshots")
+        .select("id, company_id, snapshot_date")
+        .in("company_id", allCompanyIds);
+
+      const snapshotsByCompany = new Map<string, Array<{ id: string; snapshot_date: string }>>();
+      for (const s of snapshots || []) {
+        if (!snapshotsByCompany.has(s.company_id)) snapshotsByCompany.set(s.company_id, []);
+        snapshotsByCompany.get(s.company_id)!.push(s);
+      }
+
+      return duplicateGroups.map(([, members]) => {
+        const primary = members[0];
+        const duplicates = members.slice(1);
+
+        let totalSnapshots = 0;
+        for (const m of members) {
+          totalSnapshots += (snapshotsByCompany.get(m.id) || []).length;
+        }
+
+        const primaryDates = new Set(
+          (snapshotsByCompany.get(primary.id) || []).map((s) => s.snapshot_date)
+        );
+        const conflictingDates = new Set<string>();
+        for (const dupe of duplicates) {
+          for (const s of snapshotsByCompany.get(dupe.id) || []) {
+            if (primaryDates.has(s.snapshot_date)) {
+              conflictingDates.add(s.snapshot_date);
+            }
+          }
+        }
+
+        return {
+          name: primary.name,
+          primary: { id: primary.id, name: primary.name, industry: primary.industry || "", email: primary.email || "" },
+          duplicates: duplicates.map((d) => ({
+            id: d.id, name: d.name, industry: d.industry || "", email: d.email || "",
+          })),
+          totalSnapshots,
+          conflictingDates: conflictingDates.size,
+        };
+      });
+    },
+  });
+}
+
+export function useMergeDuplicates() {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (groups: DuplicateGroup[]) => {
+      if (!user) throw new Error("Not authenticated");
+
+      let merged = 0;
+      let deleted = 0;
+
+      for (const group of groups) {
+        const primaryId = group.primary.id;
+
+        // Enrich primary with missing industry/email from duplicates
+        const updates: Record<string, string> = {};
+        if (!group.primary.industry) {
+          const withIndustry = group.duplicates.find((d) => d.industry);
+          if (withIndustry) updates.industry = withIndustry.industry;
+        }
+        if (!group.primary.email) {
+          const withEmail = group.duplicates.find((d) => d.email);
+          if (withEmail) updates.email = withEmail.email;
+        }
+        if (Object.keys(updates).length > 0) {
+          await supabase.from("companies").update(updates).eq("id", primaryId);
+        }
+
+        // Reassign non-conflicting snapshots from duplicates to primary
+        for (const dupe of group.duplicates) {
+          const { data: dupeSnapshots } = await supabase
+            .from("company_snapshots")
+            .select("id, snapshot_date")
+            .eq("company_id", dupe.id);
+
+          if (!dupeSnapshots?.length) continue;
+
+          const { data: primarySnapshots } = await supabase
+            .from("company_snapshots")
+            .select("snapshot_date")
+            .eq("company_id", primaryId);
+
+          const primaryDates = new Set(
+            (primarySnapshots || []).map((s) => s.snapshot_date)
+          );
+
+          const safeIds: string[] = [];
+          const conflictIds: string[] = [];
+
+          for (const s of dupeSnapshots) {
+            if (primaryDates.has(s.snapshot_date)) {
+              conflictIds.push(s.id);
+            } else {
+              safeIds.push(s.id);
+            }
+          }
+
+          if (safeIds.length > 0) {
+            await supabase
+              .from("company_snapshots")
+              .update({ company_id: primaryId })
+              .in("id", safeIds);
+          }
+
+          if (conflictIds.length > 0) {
+            await supabase
+              .from("company_snapshots")
+              .delete()
+              .in("id", conflictIds);
+          }
+        }
+
+        // Delete duplicate company rows
+        const dupeIds = group.duplicates.map((d) => d.id);
+        const { error: delErr } = await supabase
+          .from("companies")
+          .delete()
+          .in("id", dupeIds);
+
+        if (delErr) {
+          console.error(`Failed to delete duplicates for "${group.name}":`, delErr.message);
+          continue;
+        }
+
+        merged++;
+        deleted += dupeIds.length;
+      }
+
+      return { merged, deleted };
+    },
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ["companies"] });
+      queryClient.invalidateQueries({ queryKey: ["duplicate-companies"] });
+      queryClient.invalidateQueries({ queryKey: ["raw-snapshots"] });
+      toast.success(
+        `Merged ${result.merged} duplicate group${result.merged !== 1 ? "s" : ""}, removed ${result.deleted} duplicate record${result.deleted !== 1 ? "s" : ""}`
+      );
+    },
+  });
+}
