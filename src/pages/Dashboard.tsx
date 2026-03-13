@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/table";
 import { useMemo, useState } from "react";
 import AddCompanyDialog from "@/components/AddCompanyDialog";
+import DeduplicateBanner from "@/components/DeduplicateBanner";
 import { calculateHealthScore, DEFAULT_SCORE_FIELDS } from "@/lib/healthScore";
 import {
   Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
@@ -145,6 +146,8 @@ const Dashboard = () => {
             open={addDialogOpen}
             onOpenChange={setAddDialogOpen}
           />
+
+          <DeduplicateBanner />
 
           {/* Table */}
           <div className="rounded-xl border border-border bg-card overflow-hidden">
