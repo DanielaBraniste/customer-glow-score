@@ -255,9 +255,134 @@ const importHandlers: Record<string, (apiKey: string, userId: string, supabase: 
     console.log(`[Intercom] Imported ${imported} companies for user ${userId}`);
     return { records: imported };
   },
-  salesforce: async (_apiKey, userId, _supabase) => {
-    console.log(`[Salesforce] Import for user ${userId} — not yet implemented`);
-    return { records: 0 };
+  salesforce: async (apiKey, userId, supabase) => {
+    // Parse instance URL and access token from stored key (format: instanceUrl|accessToken)
+    const separatorIndex = apiKey.indexOf("|");
+    if (separatorIndex === -1) {
+      throw new Error("Invalid Salesforce credentials. Expected format: instanceUrl|accessToken");
+    }
+    const instanceUrl = apiKey.substring(0, separatorIndex).replace(/\/+$/, "");
+    const accessToken = apiKey.substring(separatorIndex + 1);
+
+    const headers = {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+    };
+
+    const soql = encodeURIComponent(
+      "SELECT Id, Name, Industry, AnnualRevenue, NumberOfEmployees, LastActivityDate, Rating, Website FROM Account ORDER BY Name ASC"
+    );
+
+    // 1. Paginate through all Salesforce Accounts
+    const allAccounts: Array<Record<string, any>> = [];
+    let url: string | null = `${instanceUrl}/services/data/v59.0/query?q=${soql}`;
+
+    while (url) {
+      const res = await fetch(url, { headers });
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(`Salesforce API error ${res.status}: ${text}`);
+      }
+
+      const data = await res.json();
+      allAccounts.push(...(data.records || []));
+
+      if (data.done) {
+        url = null;
+      } else if (data.nextRecordsUrl) {
+        url = `${instanceUrl}${data.nextRecordsUrl}`;
+      } else {
+        url = null;
+      }
+    }
+
+    if (allAccounts.length === 0) {
+      console.log(`[Salesforce] No accounts found for user ${userId}`);
+      return { records: 0 };
+    }
+
+    // 2. Fetch existing companies for this user
+    const { data: existingCompanies } = await supabase
+      .from("companies")
+      .select("id, name")
+      .eq("user_id", userId);
+
+    const companyByName = new Map(
+      (existingCompanies || []).map((c: any) => [c.name.toLowerCase().trim(), c])
+    );
+
+    let imported = 0;
+
+    // 3. Process each Salesforce Account
+    for (const account of allAccounts) {
+      const name = account.Name?.trim();
+      if (!name) continue;
+
+      let companyId: string;
+      const existing = companyByName.get(name.toLowerCase());
+
+      if (existing) {
+        companyId = existing.id;
+      } else {
+        const { data: newCompany, error: cErr } = await supabase
+          .from("companies")
+          .insert({
+            user_id: userId,
+            name,
+            industry: account.Industry || "",
+            email: account.Website ? `info@${new URL(account.Website).hostname}` : "",
+          })
+          .select("id")
+          .single();
+
+        if (cErr) {
+          console.error(`[Salesforce] Failed to create company "${name}":`, cErr.message);
+          continue;
+        }
+        companyId = newCompany.id;
+        companyByName.set(name.toLowerCase(), { id: companyId, name });
+      }
+
+      // Build snapshot data
+      const snapshotData: Record<string, any> = {};
+
+      if (account.AnnualRevenue != null) {
+        snapshotData.mrr = Math.round(Number(account.AnnualRevenue) / 12);
+      }
+      if (account.NumberOfEmployees != null) {
+        snapshotData.employees = Number(account.NumberOfEmployees);
+      }
+      if (account.LastActivityDate) {
+        snapshotData.lastLogin = account.LastActivityDate;
+      }
+      if (account.Rating) {
+        const ratingMap: Record<string, number> = { Hot: 90, Warm: 60, Cold: 30 };
+        snapshotData.usageScore = ratingMap[account.Rating] || 50;
+        snapshotData.rating = account.Rating;
+      }
+
+      // Upsert snapshot
+      const { error: sErr } = await supabase
+        .from("company_snapshots")
+        .upsert(
+          {
+            company_id: companyId,
+            user_id: userId,
+            source: "salesforce",
+            data: snapshotData,
+          },
+          { onConflict: "company_id,snapshot_date" }
+        );
+
+      if (sErr) {
+        console.error(`[Salesforce] Failed to upsert snapshot for "${name}":`, sErr.message);
+        continue;
+      }
+      imported++;
+    }
+
+    console.log(`[Salesforce] Imported ${imported} accounts for user ${userId}`);
+    return { records: imported };
   },
   zendesk: async (_apiKey, userId, _supabase) => {
     console.log(`[Zendesk] Import for user ${userId} — not yet implemented`);
