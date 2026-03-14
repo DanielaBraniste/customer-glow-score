@@ -112,39 +112,84 @@ export type Database = {
         }
         Relationships: []
       }
+      notification_logs: {
+        Row: {
+          alerts_count: number
+          channel: string
+          companies_included: number
+          error_message: string | null
+          id: string
+          notification_type: string
+          sent_at: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          alerts_count?: number
+          channel: string
+          companies_included?: number
+          error_message?: string | null
+          id?: string
+          notification_type: string
+          sent_at?: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          alerts_count?: number
+          channel?: string
+          companies_included?: number
+          error_message?: string | null
+          id?: string
+          notification_type?: string
+          sent_at?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
+          alert_threshold: number
           company: string | null
           created_at: string
           email_notifications: boolean
           id: string
+          last_notified_at: string | null
           notification_frequency: Database["public"]["Enums"]["notification_frequency"]
           plan: Database["public"]["Enums"]["plan_tier"]
           slack_notifications: boolean
+          slack_webhook_url: string | null
           updated_at: string
           user_id: string
           username: string | null
         }
         Insert: {
+          alert_threshold?: number
           company?: string | null
           created_at?: string
           email_notifications?: boolean
           id?: string
+          last_notified_at?: string | null
           notification_frequency?: Database["public"]["Enums"]["notification_frequency"]
           plan?: Database["public"]["Enums"]["plan_tier"]
           slack_notifications?: boolean
+          slack_webhook_url?: string | null
           updated_at?: string
           user_id: string
           username?: string | null
         }
         Update: {
+          alert_threshold?: number
           company?: string | null
           created_at?: string
           email_notifications?: boolean
           id?: string
+          last_notified_at?: string | null
           notification_frequency?: Database["public"]["Enums"]["notification_frequency"]
           plan?: Database["public"]["Enums"]["plan_tier"]
           slack_notifications?: boolean
+          slack_webhook_url?: string | null
           updated_at?: string
           user_id?: string
           username?: string | null
