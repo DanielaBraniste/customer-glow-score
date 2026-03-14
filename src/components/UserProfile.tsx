@@ -7,7 +7,8 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { User, Save, Loader2 } from "lucide-react";
+import { Slider } from "@/components/ui/slider";
+import { User, Save, Loader2, Bell } from "lucide-react";
 import { toast } from "sonner";
 
 type NotificationFrequency = "daily" | "weekly" | "biweekly" | "monthly" | "quarterly";
@@ -20,6 +21,8 @@ interface Profile {
   notification_frequency: NotificationFrequency;
   email_notifications: boolean;
   slack_notifications: boolean;
+  alert_threshold: number;
+  slack_webhook_url: string;
 }
 
 const frequencyByPlan: Record<PlanTier, NotificationFrequency[]> = {
@@ -46,9 +49,12 @@ const UserProfile = () => {
     notification_frequency: "weekly",
     email_notifications: true,
     slack_notifications: false,
+    alert_threshold: 60,
+    slack_webhook_url: "",
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [sendingTest, setSendingTest] = useState(false);
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
@@ -56,7 +62,7 @@ const UserProfile = () => {
     const fetchProfile = async () => {
       const { data, error } = await supabase
         .from("profiles")
-        .select("username, company, plan, notification_frequency, email_notifications, slack_notifications")
+        .select("username, company, plan, notification_frequency, email_notifications, slack_notifications, alert_threshold, slack_webhook_url")
         .eq("user_id", user.id)
         .maybeSingle();
 
@@ -68,9 +74,10 @@ const UserProfile = () => {
           notification_frequency: (data.notification_frequency as NotificationFrequency) || "weekly",
           email_notifications: data.email_notifications ?? true,
           slack_notifications: data.slack_notifications ?? false,
+          alert_threshold: (data as any).alert_threshold ?? 60,
+          slack_webhook_url: (data as any).slack_webhook_url || "",
         });
       } else if (!error) {
-        // Profile doesn't exist yet, create it
         await supabase.from("profiles").insert({ user_id: user.id });
       }
       setLoading(false);
@@ -89,7 +96,9 @@ const UserProfile = () => {
         notification_frequency: profile.notification_frequency,
         email_notifications: profile.email_notifications,
         slack_notifications: profile.slack_notifications,
-      })
+        alert_threshold: profile.alert_threshold,
+        slack_webhook_url: profile.slack_webhook_url,
+      } as any)
       .eq("user_id", user.id);
 
     if (error) {
@@ -101,9 +110,27 @@ const UserProfile = () => {
     setSaving(false);
   };
 
+  const handleSendTest = async () => {
+    if (!user) return;
+    setSendingTest(true);
+    try {
+      const { error } = await supabase.functions.invoke("send-notifications", {
+        body: { test: true, user_id: user.id },
+      });
+      if (error) {
+        toast.error("Failed to send test notification");
+      } else {
+        toast.success("Test notification sent! Check your email and/or Slack.");
+      }
+    } catch {
+      toast.error("Failed to send test notification");
+    } finally {
+      setSendingTest(false);
+    }
+  };
+
   const availableFrequencies = frequencyByPlan[profile.plan];
 
-  // Ensure current frequency is valid for plan
   useEffect(() => {
     if (!availableFrequencies.includes(profile.notification_frequency)) {
       setProfile((p) => ({ ...p, notification_frequency: availableFrequencies[0] }));
@@ -204,12 +231,64 @@ const UserProfile = () => {
                   onCheckedChange={(val) => setProfile({ ...profile, slack_notifications: val })}
                 />
               </div>
+
+              {profile.slack_notifications && (
+                <div className="space-y-1.5">
+                  <Label htmlFor="slack-webhook" className="text-xs">Slack Webhook URL</Label>
+                  <Input
+                    id="slack-webhook"
+                    placeholder="https://hooks.slack.com/services/..."
+                    value={profile.slack_webhook_url}
+                    onChange={(e) => setProfile({ ...profile, slack_webhook_url: e.target.value })}
+                    className="text-xs"
+                  />
+                  <p className="text-[10px] text-muted-foreground">
+                    Create an incoming webhook in your Slack workspace.
+                  </p>
+                </div>
+              )}
+
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs">Alert Threshold</Label>
+                  <span className="text-xs font-medium text-foreground">{profile.alert_threshold}</span>
+                </div>
+                <Slider
+                  value={[profile.alert_threshold]}
+                  onValueChange={(v) => setProfile({ ...profile, alert_threshold: v[0] })}
+                  min={0}
+                  max={100}
+                  step={5}
+                />
+                <p className="text-[10px] text-muted-foreground">
+                  Get alerted when any company's health score falls below {profile.alert_threshold}.
+                </p>
+              </div>
             </div>
 
             <Button variant="hero" size="sm" className="w-full" onClick={handleSave} disabled={saving}>
               {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
               Save Changes
             </Button>
+
+            <Button
+              variant="heroOutline"
+              size="sm"
+              className="w-full"
+              onClick={handleSendTest}
+              disabled={sendingTest || (!profile.email_notifications && !profile.slack_notifications)}
+            >
+              {sendingTest ? (
+                <><Loader2 className="h-4 w-4 animate-spin mr-2" /> Sending…</>
+              ) : (
+                <><Bell className="h-4 w-4 mr-2" /> Send Test Notification</>
+              )}
+            </Button>
+            {!profile.email_notifications && !profile.slack_notifications && (
+              <p className="text-[10px] text-muted-foreground text-center">
+                Enable email or Slack notifications to send a test.
+              </p>
+            )}
           </div>
         )}
       </PopoverContent>
