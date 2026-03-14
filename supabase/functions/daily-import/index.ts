@@ -384,9 +384,136 @@ const importHandlers: Record<string, (apiKey: string, userId: string, supabase: 
     console.log(`[Salesforce] Imported ${imported} accounts for user ${userId}`);
     return { records: imported };
   },
-  zendesk: async (_apiKey, userId, _supabase) => {
-    console.log(`[Zendesk] Import for user ${userId} — not yet implemented`);
-    return { records: 0 };
+  zendesk: async (apiKey, userId, supabase) => {
+    // Parse stored credentials: subdomain|email/token|apiToken
+    const parts = apiKey.split("|");
+    if (parts.length < 3) {
+      throw new Error("Invalid Zendesk credentials. Expected format: subdomain|email/token|apiToken");
+    }
+    const [subdomain, emailToken, apiToken] = parts;
+    const authHeader = "Basic " + btoa(`${emailToken}:${apiToken}`);
+    const baseUrl = `https://${subdomain}.zendesk.com/api/v2`;
+    const headers = {
+      Authorization: authHeader,
+      "Content-Type": "application/json",
+    };
+
+    // 1. Paginate through all organizations
+    const allOrgs: Array<Record<string, any>> = [];
+    let url: string | null = `${baseUrl}/organizations.json?page[size]=100`;
+
+    while (url) {
+      const res = await fetch(url, { headers });
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(`Zendesk API error ${res.status}: ${text}`);
+      }
+      const data = await res.json();
+      allOrgs.push(...(data.organizations || []));
+      url = data.meta?.has_more ? data.links?.next : null;
+    }
+
+    if (allOrgs.length === 0) {
+      console.log(`[Zendesk] No organizations found for user ${userId}`);
+      return { records: 0 };
+    }
+
+    // 2. Fetch existing companies for this user
+    const { data: existingCompanies } = await supabase
+      .from("companies")
+      .select("id, name")
+      .eq("user_id", userId);
+
+    const companyByName = new Map(
+      (existingCompanies || []).map((c: any) => [c.name.toLowerCase().trim(), c])
+    );
+
+    let imported = 0;
+
+    // 3. Process each organization
+    for (const org of allOrgs) {
+      const name = org.name?.trim();
+      if (!name) continue;
+
+      let companyId: string;
+      const existing = companyByName.get(name.toLowerCase());
+
+      if (existing) {
+        companyId = existing.id;
+      } else {
+        const industry = org.organization_fields?.industry || "";
+        const { data: newCompany, error: cErr } = await supabase
+          .from("companies")
+          .insert({ user_id: userId, name, industry, email: "" })
+          .select("id")
+          .single();
+
+        if (cErr) {
+          console.error(`[Zendesk] Failed to create company "${name}":`, cErr.message);
+          continue;
+        }
+        companyId = newCompany.id;
+        companyByName.set(name.toLowerCase(), { id: companyId, name });
+      }
+
+      // Fetch open ticket count for this org
+      let ticketCount = 0;
+      try {
+        const ticketRes = await fetch(
+          `${baseUrl}/organizations/${org.id}/tickets.json?per_page=1`,
+          { headers }
+        );
+        if (ticketRes.ok) {
+          const ticketData = await ticketRes.json();
+          ticketCount = ticketData.count || 0;
+        } else {
+          await ticketRes.text();
+        }
+      } catch (err) {
+        console.warn(`[Zendesk] Failed to fetch ticket count for "${name}":`, err);
+      }
+
+      // Build snapshot data
+      const snapshotData: Record<string, any> = {
+        supportTickets: ticketCount,
+      };
+
+      if (org.organization_fields?.contract_end) {
+        snapshotData.contractEnd = org.organization_fields.contract_end;
+      }
+      if (org.tags?.length) {
+        snapshotData.tags = org.tags.join(", ");
+      }
+      if (org.organization_fields) {
+        for (const [key, value] of Object.entries(org.organization_fields)) {
+          if (value != null && value !== "" && key !== "industry" && key !== "contract_end") {
+            snapshotData[key] = value;
+          }
+        }
+      }
+
+      // Upsert snapshot
+      const { error: sErr } = await supabase
+        .from("company_snapshots")
+        .upsert(
+          {
+            company_id: companyId,
+            user_id: userId,
+            source: "zendesk",
+            data: snapshotData,
+          },
+          { onConflict: "company_id,snapshot_date" }
+        );
+
+      if (sErr) {
+        console.error(`[Zendesk] Failed to upsert snapshot for "${name}":`, sErr.message);
+        continue;
+      }
+      imported++;
+    }
+
+    console.log(`[Zendesk] Imported ${imported} organizations for user ${userId}`);
+    return { records: imported };
   },
   pipedrive: async (_apiKey, userId, _supabase) => {
     console.log(`[Pipedrive] Import for user ${userId} — not yet implemented`);
