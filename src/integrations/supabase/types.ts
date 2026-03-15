@@ -79,6 +79,27 @@ export type Database = {
           },
         ]
       }
+      connector_requests: {
+        Row: {
+          connector_name: string
+          created_at: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          connector_name: string
+          created_at?: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          connector_name?: string
+          created_at?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       import_logs: {
         Row: {
           completed_at: string | null
