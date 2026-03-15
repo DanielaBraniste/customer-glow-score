@@ -644,9 +644,180 @@ const importHandlers: Record<string, (apiKey: string, userId: string, supabase: 
     console.log(`[Pipedrive] Imported ${imported} organizations for user ${userId}`);
     return { records: imported };
   },
-  stripe: async (_apiKey, userId, _supabase) => {
-    console.log(`[Stripe] Import for user ${userId} — not yet implemented`);
-    return { records: 0 };
+  stripe: async (apiKey, userId, supabase) => {
+    const baseUrl = "https://api.stripe.com/v1/customers";
+    const headers = {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/x-www-form-urlencoded",
+    };
+
+    // 1. Paginate through all Stripe customers
+    const allCustomers: Array<Record<string, any>> = [];
+    let startingAfter: string | undefined;
+    let hasMore = true;
+
+    while (hasMore) {
+      const params = new URLSearchParams({
+        limit: "100",
+        "expand[]": "data.subscriptions",
+      });
+      if (startingAfter) params.set("starting_after", startingAfter);
+
+      const res = await fetch(`${baseUrl}?${params}`, { headers });
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(`Stripe API error ${res.status}: ${text}`);
+      }
+
+      const data = await res.json();
+      const customers = data.data || [];
+      allCustomers.push(...customers);
+
+      hasMore = data.has_more || false;
+      if (customers.length > 0) {
+        startingAfter = customers[customers.length - 1].id;
+      } else {
+        hasMore = false;
+      }
+    }
+
+    if (allCustomers.length === 0) {
+      console.log(`[Stripe] No customers found for user ${userId}`);
+      return { records: 0 };
+    }
+
+    // 2. Fetch existing companies for this user
+    const { data: existingCompanies } = await supabase
+      .from("companies")
+      .select("id, name")
+      .eq("user_id", userId);
+
+    const companyByName = new Map(
+      (existingCompanies || []).map((c: any) => [c.name.toLowerCase().trim(), c])
+    );
+
+    let imported = 0;
+
+    // Helper: calculate MRR from a Stripe subscription
+    const calcMrr = (subscription: Record<string, any>): number => {
+      let totalMonthly = 0;
+      const items = subscription.items?.data || [];
+      for (const item of items) {
+        const unitAmount = item.price?.unit_amount || 0;
+        const quantity = item.quantity || 1;
+        const interval = item.price?.recurring?.interval || "month";
+        const intervalCount = item.price?.recurring?.interval_count || 1;
+        const lineTotal = unitAmount * quantity;
+
+        switch (interval) {
+          case "day":
+            totalMonthly += (lineTotal / intervalCount) * 30;
+            break;
+          case "week":
+            totalMonthly += (lineTotal / intervalCount) * 4.33;
+            break;
+          case "month":
+            totalMonthly += lineTotal / intervalCount;
+            break;
+          case "year":
+            totalMonthly += lineTotal / (intervalCount * 12);
+            break;
+          default:
+            totalMonthly += lineTotal;
+        }
+      }
+      return Math.round(totalMonthly / 100);
+    };
+
+    // 3. Process each Stripe customer
+    for (const customer of allCustomers) {
+      const name = (customer.name || customer.email || "").trim();
+      if (!name) continue;
+
+      let companyId: string;
+      const existing = companyByName.get(name.toLowerCase());
+
+      if (existing) {
+        companyId = existing.id;
+      } else {
+        const { data: newCompany, error: cErr } = await supabase
+          .from("companies")
+          .insert({
+            user_id: userId,
+            name,
+            industry: customer.metadata?.industry || "",
+            email: customer.email || "",
+          })
+          .select("id")
+          .single();
+
+        if (cErr) {
+          console.error(`[Stripe] Failed to create company "${name}":`, cErr.message);
+          continue;
+        }
+        companyId = newCompany.id;
+        companyByName.set(name.toLowerCase(), { id: companyId, name });
+      }
+
+      // Build snapshot data
+      const snapshotData: Record<string, any> = {};
+
+      const activeSubs = (customer.subscriptions?.data || []).filter(
+        (s: Record<string, any>) => s.status === "active" || s.status === "trialing"
+      );
+
+      let totalMrr = 0;
+      let contractEnd: string | null = null;
+
+      for (const sub of activeSubs) {
+        totalMrr += calcMrr(sub);
+        if (sub.current_period_end) {
+          const endDate = new Date(sub.current_period_end * 1000).toISOString().split("T")[0];
+          if (!contractEnd || endDate > contractEnd) {
+            contractEnd = endDate;
+          }
+        }
+      }
+
+      snapshotData.mrr = totalMrr;
+      if (contractEnd) snapshotData.contractEnd = contractEnd;
+      snapshotData.activeSubscriptions = activeSubs.length;
+      snapshotData.totalSubscriptions = (customer.subscriptions?.data || []).length;
+
+      if (customer.metadata?.plan) {
+        snapshotData.plan = customer.metadata.plan;
+      }
+
+      if (customer.metadata) {
+        for (const [key, value] of Object.entries(customer.metadata)) {
+          if (value && key !== "industry" && key !== "plan" && !snapshotData[key]) {
+            snapshotData[key] = value;
+          }
+        }
+      }
+
+      // Upsert snapshot
+      const { error: sErr } = await supabase
+        .from("company_snapshots")
+        .upsert(
+          {
+            company_id: companyId,
+            user_id: userId,
+            source: "stripe",
+            data: snapshotData,
+          },
+          { onConflict: "company_id,snapshot_date" }
+        );
+
+      if (sErr) {
+        console.error(`[Stripe] Failed to upsert snapshot for "${name}":`, sErr.message);
+        continue;
+      }
+      imported++;
+    }
+
+    console.log(`[Stripe] Imported ${imported} customers for user ${userId}`);
+    return { records: imported };
   },
   segment: async (_apiKey, userId, _supabase) => {
     console.log(`[Segment] Import for user ${userId} — not yet implemented`);
