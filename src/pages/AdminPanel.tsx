@@ -160,6 +160,7 @@ const AdminPanel = () => {
       const data = await callAdmin(password, "list");
       setUsers(data.users);
       setAuthenticated(true);
+      fetchRequests();
     } catch {
       toast.error("Invalid admin password");
     } finally {
