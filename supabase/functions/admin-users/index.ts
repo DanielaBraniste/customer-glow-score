@@ -133,6 +133,33 @@ Deno.serve(async (req) => {
       });
     }
 
+    if (action === "connector-requests") {
+      const { data, error } = await supabaseAdmin
+        .from("connector_requests")
+        .select("*")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+
+      // Enrich with user emails
+      const userIds = [...new Set((data || []).map((r: any) => r.user_id))];
+      const emailMap = new Map<string, string>();
+      for (const uid of userIds) {
+        try {
+          const { data: u } = await supabaseAdmin.auth.admin.getUserById(uid);
+          if (u?.user?.email) emailMap.set(uid, u.user.email);
+        } catch {}
+      }
+
+      const requests = (data || []).map((r: any) => ({
+        ...r,
+        email: emailMap.get(r.user_id) || "Unknown",
+      }));
+
+      return new Response(JSON.stringify({ requests }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     return new Response(JSON.stringify({ error: "Unknown action" }), {
       status: 400,
       headers: { ...corsHeaders, "Content-Type": "application/json" },

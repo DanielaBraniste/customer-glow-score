@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Lock, Users, Eye, Trash2, Shield, ArrowLeft, Zap, FileText, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import { Lock, Users, Eye, Trash2, Shield, ArrowLeft, Zap, FileText, ArrowUpDown, ArrowUp, ArrowDown, MessageSquarePlus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -128,6 +128,19 @@ const callAdmin = async (password: string, action: string, params?: Record<strin
 };
 
 const AdminPanel = () => {
+  // Connector requests
+  interface ConnectorRequest { id: string; user_id: string; connector_name: string; created_at: string; email: string; }
+  const [connectorRequests, setConnectorRequests] = useState<ConnectorRequest[]>([]);
+  const [sortRequests, setSortRequests] = useState<SortConfig>({ key: "", direction: null });
+  const handleSortRequests = (key: string) => setSortRequests((prev) => handleSortToggle(prev, key));
+
+  const fetchRequests = async () => {
+    try {
+      const data = await callAdmin(password, "connector-requests");
+      setConnectorRequests(data.requests || []);
+    } catch {}
+  };
+
   const [authenticated, setAuthenticated] = useState(false);
   const [password, setPassword] = useState("");
   const [users, setUsers] = useState<UserData[]>([]);
@@ -147,6 +160,7 @@ const AdminPanel = () => {
       const data = await callAdmin(password, "list");
       setUsers(data.users);
       setAuthenticated(true);
+      fetchRequests();
     } catch {
       toast.error("Invalid admin password");
     } finally {
@@ -468,6 +482,16 @@ const AdminPanel = () => {
           </Button>
         </div>
 
+        <Tabs defaultValue="users">
+          <TabsList className="mb-4">
+            <TabsTrigger value="users">Users ({users.length})</TabsTrigger>
+            <TabsTrigger value="requests">
+              <MessageSquarePlus className="h-3.5 w-3.5 mr-1.5" />
+              Connector Requests ({connectorRequests.length})
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="users">
         <Card>
           <CardContent className="pt-6">
             <Table>
@@ -534,6 +558,39 @@ const AdminPanel = () => {
             </Table>
           </CardContent>
         </Card>
+          </TabsContent>
+
+          <TabsContent value="requests">
+            <Card>
+              <CardContent className="pt-6">
+                {connectorRequests.length === 0 ? (
+                  <p className="text-muted-foreground text-center py-8">No connector requests yet</p>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <SortableHead label="Connector" sortKey="connector_name" currentSort={sortRequests} onSort={handleSortRequests} />
+                        <SortableHead label="Requested By" sortKey="email" currentSort={sortRequests} onSort={handleSortRequests} />
+                        <SortableHead label="Date" sortKey="created_at" currentSort={sortRequests} onSort={handleSortRequests} />
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {sortRows(connectorRequests, sortRequests).map((r) => (
+                        <TableRow key={r.id}>
+                          <TableCell className="font-medium">{r.connector_name}</TableCell>
+                          <TableCell className="text-muted-foreground">{r.email}</TableCell>
+                          <TableCell className="text-sm text-muted-foreground">
+                            {format(new Date(r.created_at), "MMM d, yyyy 'at' h:mm a")}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
       </div>
 
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
