@@ -236,13 +236,16 @@ const Connectors = () => {
             with your customer data in the meantime.
           </p>
           <form
-            onSubmit={(e) => {
+            onSubmit={async (e) => {
               e.preventDefault();
               const input = (e.target as HTMLFormElement).elements.namedItem("connector-request") as HTMLInputElement;
-              if (input.value.trim()) {
-                toast.success(`Thanks! We've noted your request for "${input.value.trim()}".`);
-                input.value = "";
-              }
+              const val = input.value.trim();
+              if (!val) return;
+              if (!user) { toast.error("Please sign in first"); return; }
+              const { error } = await supabase.from("connector_requests").insert({ user_id: user.id, connector_name: val });
+              if (error) { toast.error("Failed to submit request"); console.error(error); return; }
+              toast.success(`Thanks! We've noted your request for "${val}".`);
+              input.value = "";
             }}
             className="flex items-center gap-2 max-w-sm mx-auto"
           >
