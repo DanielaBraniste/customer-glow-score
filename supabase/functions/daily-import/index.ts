@@ -515,9 +515,134 @@ const importHandlers: Record<string, (apiKey: string, userId: string, supabase: 
     console.log(`[Zendesk] Imported ${imported} organizations for user ${userId}`);
     return { records: imported };
   },
-  pipedrive: async (_apiKey, userId, _supabase) => {
-    console.log(`[Pipedrive] Import for user ${userId} — not yet implemented`);
-    return { records: 0 };
+  pipedrive: async (apiKey, userId, supabase) => {
+    const baseUrl = "https://api.pipedrive.com/v1/organizations";
+
+    // 1. Paginate through all Pipedrive organizations
+    const allOrgs: Array<Record<string, any>> = [];
+    let start = 0;
+    const limit = 500;
+    let hasMore = true;
+
+    while (hasMore) {
+      const params = new URLSearchParams({
+        api_token: apiKey,
+        start: String(start),
+        limit: String(limit),
+      });
+
+      const res = await fetch(`${baseUrl}?${params}`);
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(`Pipedrive API error ${res.status}: ${text}`);
+      }
+
+      const data = await res.json();
+      if (!data.success) {
+        throw new Error(`Pipedrive API returned success: false`);
+      }
+
+      allOrgs.push(...(data.data || []));
+      hasMore = data.additional_data?.pagination?.more_items_in_collection || false;
+      start = data.additional_data?.pagination?.next_start || start + limit;
+    }
+
+    if (allOrgs.length === 0) {
+      console.log(`[Pipedrive] No organizations found for user ${userId}`);
+      return { records: 0 };
+    }
+
+    // 2. Fetch existing companies for this user
+    const { data: existingCompanies } = await supabase
+      .from("companies")
+      .select("id, name")
+      .eq("user_id", userId);
+
+    const companyByName = new Map(
+      (existingCompanies || []).map((c: any) => [c.name.toLowerCase().trim(), c])
+    );
+
+    let imported = 0;
+
+    // 3. Process each Pipedrive organization
+    for (const org of allOrgs) {
+      const name = org.name?.trim();
+      if (!name) continue;
+
+      let companyId: string;
+      const existing = companyByName.get(name.toLowerCase());
+
+      if (existing) {
+        companyId = existing.id;
+      } else {
+        const { data: newCompany, error: cErr } = await supabase
+          .from("companies")
+          .insert({
+            user_id: userId,
+            name,
+            industry: "",
+            email: org.cc_email || "",
+          })
+          .select("id")
+          .single();
+
+        if (cErr) {
+          console.error(`[Pipedrive] Failed to create company "${name}":`, cErr.message);
+          continue;
+        }
+        companyId = newCompany.id;
+        companyByName.set(name.toLowerCase(), { id: companyId, name });
+      }
+
+      // Build snapshot data from Pipedrive fields
+      const snapshotData: Record<string, any> = {};
+
+      if (org.open_deals_count != null) {
+        snapshotData.openDeals = Number(org.open_deals_count);
+      }
+      if (org.won_deals_count != null) {
+        snapshotData.wonDeals = Number(org.won_deals_count);
+      }
+      if (org.lost_deals_count != null) {
+        snapshotData.lostDeals = Number(org.lost_deals_count);
+      }
+      if (org.people_count != null) {
+        snapshotData.contacts = Number(org.people_count);
+      }
+      if (org.last_activity_date) {
+        snapshotData.lastLogin = org.last_activity_date;
+      }
+      if (org.next_activity_date) {
+        snapshotData.nextActivity = org.next_activity_date;
+      }
+      if (org.activities_count != null && org.done_activities_count != null) {
+        const total = Number(org.activities_count);
+        const done = Number(org.done_activities_count);
+        snapshotData.usageScore = total > 0 ? Math.round((done / total) * 100) : 0;
+      }
+
+      // Upsert snapshot
+      const { error: sErr } = await supabase
+        .from("company_snapshots")
+        .upsert(
+          {
+            company_id: companyId,
+            user_id: userId,
+            source: "pipedrive",
+            data: snapshotData,
+          },
+          { onConflict: "company_id,snapshot_date" }
+        );
+
+      if (sErr) {
+        console.error(`[Pipedrive] Failed to upsert snapshot for "${name}":`, sErr.message);
+        continue;
+      }
+      imported++;
+    }
+
+    console.log(`[Pipedrive] Imported ${imported} organizations for user ${userId}`);
+    return { records: imported };
   },
   stripe: async (_apiKey, userId, _supabase) => {
     console.log(`[Stripe] Import for user ${userId} — not yet implemented`);
