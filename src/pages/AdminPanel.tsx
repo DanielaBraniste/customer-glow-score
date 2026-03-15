@@ -558,6 +558,39 @@ const AdminPanel = () => {
             </Table>
           </CardContent>
         </Card>
+          </TabsContent>
+
+          <TabsContent value="requests">
+            <Card>
+              <CardContent className="pt-6">
+                {connectorRequests.length === 0 ? (
+                  <p className="text-muted-foreground text-center py-8">No connector requests yet</p>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <SortableHead label="Connector" sortKey="connector_name" currentSort={sortRequests} onSort={handleSortRequests} />
+                        <SortableHead label="Requested By" sortKey="email" currentSort={sortRequests} onSort={handleSortRequests} />
+                        <SortableHead label="Date" sortKey="created_at" currentSort={sortRequests} onSort={handleSortRequests} />
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {sortRows(connectorRequests, sortRequests).map((r) => (
+                        <TableRow key={r.id}>
+                          <TableCell className="font-medium">{r.connector_name}</TableCell>
+                          <TableCell className="text-muted-foreground">{r.email}</TableCell>
+                          <TableCell className="text-sm text-muted-foreground">
+                            {format(new Date(r.created_at), "MMM d, yyyy 'at' h:mm a")}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
       </div>
 
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
