@@ -819,9 +819,150 @@ const importHandlers: Record<string, (apiKey: string, userId: string, supabase: 
     console.log(`[Stripe] Imported ${imported} customers for user ${userId}`);
     return { records: imported };
   },
-  segment: async (_apiKey, userId, _supabase) => {
-    console.log(`[Segment] Import for user ${userId} — not yet implemented`);
-    return { records: 0 };
+  segment: async (apiKey, userId, supabase) => {
+    // Parse credentials: spaceId|accessToken
+    const separatorIndex = apiKey.indexOf("|");
+    if (separatorIndex === -1) {
+      throw new Error("Invalid Segment credentials. Expected format: spaceId|accessToken");
+    }
+    const spaceId = apiKey.substring(0, separatorIndex);
+    const accessToken = apiKey.substring(separatorIndex + 1);
+
+    const baseUrl = `https://profiles.segment.com/v1/spaces/${spaceId}/collections/accounts/profiles`;
+    const authHeader = "Basic " + btoa(`${accessToken}:`);
+    const headers = {
+      Authorization: authHeader,
+      "Content-Type": "application/json",
+    };
+
+    // 1. Paginate through all Segment account profiles
+    const allProfiles: Array<Record<string, any>> = [];
+    let cursor: string | undefined;
+    let hasMore = true;
+
+    while (hasMore) {
+      const params = new URLSearchParams({ limit: "100", include: "traits" });
+      if (cursor) params.set("cursor", cursor);
+
+      const res = await fetch(`${baseUrl}?${params}`, { headers });
+
+      if (res.status === 404) {
+        throw new Error(
+          "Segment Profile API returned 404. Ensure you have Segment Unify enabled and the Space ID is correct."
+        );
+      }
+      if (res.status === 401 || res.status === 403) {
+        throw new Error("Segment authentication failed. Check your Profile API Access Token.");
+      }
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(`Segment API error ${res.status}: ${text}`);
+      }
+
+      const data = await res.json();
+      allProfiles.push(...(data.data || []));
+      hasMore = data.cursor?.has_more || false;
+      cursor = data.cursor?.next;
+    }
+
+    if (allProfiles.length === 0) {
+      console.log(`[Segment] No account profiles found for user ${userId}`);
+      return { records: 0 };
+    }
+
+    // 2. Fetch existing companies for this user
+    const { data: existingCompanies } = await supabase
+      .from("companies")
+      .select("id, name")
+      .eq("user_id", userId);
+
+    const companyByName = new Map(
+      (existingCompanies || []).map((c: any) => [c.name.toLowerCase().trim(), c])
+    );
+
+    let imported = 0;
+
+    // 3. Process each Segment account profile
+    for (const profile of allProfiles) {
+      const traits = profile.traits || {};
+      const name = (traits.name || traits.company_name || "").trim();
+      if (!name) continue;
+
+      let companyId: string;
+      const existing = companyByName.get(name.toLowerCase());
+
+      if (existing) {
+        companyId = existing.id;
+      } else {
+        const { data: newCompany, error: cErr } = await supabase
+          .from("companies")
+          .insert({
+            user_id: userId,
+            name,
+            industry: traits.industry || "",
+            email: traits.email || "",
+          })
+          .select("id")
+          .single();
+
+        if (cErr) {
+          console.error(`[Segment] Failed to create company "${name}":`, cErr.message);
+          continue;
+        }
+        companyId = newCompany.id;
+        companyByName.set(name.toLowerCase(), { id: companyId, name });
+      }
+
+      // Build snapshot data from Segment traits
+      const snapshotData: Record<string, any> = {};
+      const knownCompanyKeys = new Set(["name", "company_name", "industry", "email"]);
+
+      for (const [key, value] of Object.entries(traits)) {
+        if (knownCompanyKeys.has(key)) continue;
+        if (value == null || value === "") continue;
+
+        const keyLower = key.toLowerCase();
+        if (keyLower === "mrr" || keyLower === "monthly_recurring_revenue") {
+          snapshotData.mrr = Number(value);
+        } else if (keyLower === "nps" || keyLower === "nps_score" || keyLower === "net_promoter_score") {
+          snapshotData.nps = Number(value);
+        } else if (keyLower === "last_seen" || keyLower === "last_active" || keyLower === "last_login") {
+          snapshotData.lastLogin = String(value).split("T")[0];
+        } else if (keyLower === "usage_score" || keyLower === "health_score" || keyLower === "engagement_score") {
+          snapshotData.usageScore = Number(value);
+        } else if (keyLower === "support_tickets" || keyLower === "open_tickets") {
+          snapshotData.supportTickets = Number(value);
+        } else if (keyLower === "contract_end" || keyLower === "renewal_date") {
+          snapshotData.contractEnd = String(value).split("T")[0];
+        } else {
+          const normalizedKey = key.replace(/\s+/g, "_").toLowerCase();
+          const numVal = Number(value);
+          snapshotData[normalizedKey] = isNaN(numVal) ? value : numVal;
+        }
+      }
+
+      // Upsert snapshot
+      const { error: sErr } = await supabase
+        .from("company_snapshots")
+        .upsert(
+          {
+            company_id: companyId,
+            user_id: userId,
+            source: "segment",
+            data: snapshotData,
+          },
+          { onConflict: "company_id,snapshot_date" }
+        );
+
+      if (sErr) {
+        console.error(`[Segment] Failed to upsert snapshot for "${name}":`, sErr.message);
+        continue;
+      }
+      imported++;
+    }
+
+    console.log(`[Segment] Imported ${imported} account profiles for user ${userId}`);
+    return { records: imported };
   },
   slack: async (_apiKey, userId, _supabase) => {
     console.log(`[Slack] Import for user ${userId} — not yet implemented`);
