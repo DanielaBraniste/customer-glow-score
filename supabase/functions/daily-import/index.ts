@@ -964,9 +964,169 @@ const importHandlers: Record<string, (apiKey: string, userId: string, supabase: 
     console.log(`[Segment] Imported ${imported} account profiles for user ${userId}`);
     return { records: imported };
   },
-  slack: async (_apiKey, userId, _supabase) => {
-    console.log(`[Slack] Import for user ${userId} — not yet implemented`);
-    return { records: 0 };
+  slack: async (apiKey, userId, supabase) => {
+    const headers = {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    };
+
+    // 1. Fetch all non-archived channels
+    const allChannels: Array<Record<string, any>> = [];
+    let cursor: string | undefined;
+
+    do {
+      const params = new URLSearchParams({
+        types: "public_channel,private_channel",
+        limit: "200",
+        exclude_archived: "true",
+      });
+      if (cursor) params.set("cursor", cursor);
+
+      const res = await fetch(`https://slack.com/api/conversations.list?${params}`, { headers });
+      if (!res.ok) {
+        throw new Error(`Slack API HTTP error ${res.status}`);
+      }
+
+      const data = await res.json();
+      if (!data.ok) {
+        throw new Error(`Slack API error: ${data.error || "unknown"}`);
+      }
+
+      allChannels.push(...(data.channels || []));
+      cursor = data.response_metadata?.next_cursor || undefined;
+      if (cursor === "") cursor = undefined;
+    } while (cursor);
+
+    if (allChannels.length === 0) {
+      console.log(`[Slack] No channels found for user ${userId}`);
+      return { records: 0 };
+    }
+
+    // 2. Match channels to existing companies (enrichment-only, no creation)
+    const { data: existingCompanies } = await supabase
+      .from("companies")
+      .select("id, name")
+      .eq("user_id", userId);
+
+    if (!existingCompanies || existingCompanies.length === 0) {
+      console.log(`[Slack] No existing companies to match channels against for user ${userId}`);
+      return { records: 0 };
+    }
+
+    const companyByNormalized = new Map<string, { id: string; name: string }>();
+    for (const c of existingCompanies) {
+      const normalized = c.name.toLowerCase().replace(/[^a-z0-9]/g, "");
+      companyByNormalized.set(normalized, c);
+    }
+
+    const channelCompanyPairs: Array<{
+      channel: Record<string, any>;
+      company: { id: string; name: string };
+    }> = [];
+
+    for (const channel of allChannels) {
+      const channelNormalized = channel.name
+        .toLowerCase()
+        .replace(/^(customer-|shared-|client-|ext-)/, "")
+        .replace(/[^a-z0-9]/g, "");
+
+      for (const [companyNormalized, company] of companyByNormalized) {
+        if (
+          channelNormalized.includes(companyNormalized) ||
+          companyNormalized.includes(channelNormalized)
+        ) {
+          channelCompanyPairs.push({ channel, company });
+          break;
+        }
+      }
+    }
+
+    if (channelCompanyPairs.length === 0) {
+      console.log(`[Slack] No channels matched to existing companies for user ${userId}`);
+      return { records: 0 };
+    }
+
+    // 3. Fetch recent activity for matched channels (last 7 days)
+    const sevenDaysAgo = Math.floor((Date.now() - 7 * 24 * 60 * 60 * 1000) / 1000);
+    let imported = 0;
+
+    for (const { channel, company } of channelCompanyPairs) {
+      let messageCount = 0;
+      const uniqueUsers = new Set<string>();
+      let latestMessageTs: number | null = null;
+
+      try {
+        const historyParams = new URLSearchParams({
+          channel: channel.id,
+          limit: "100",
+          oldest: String(sevenDaysAgo),
+        });
+
+        const histRes = await fetch(
+          `https://slack.com/api/conversations.history?${historyParams}`,
+          { headers }
+        );
+
+        if (histRes.ok) {
+          const histData = await histRes.json();
+          if (histData.ok) {
+            const messages = (histData.messages || []).filter(
+              (m: Record<string, any>) => m.type === "message" && !m.subtype
+            );
+            messageCount = messages.length;
+            for (const m of messages) {
+              if (m.user) uniqueUsers.add(m.user);
+              const ts = parseFloat(m.ts);
+              if (!latestMessageTs || ts > latestMessageTs) {
+                latestMessageTs = ts;
+              }
+            }
+          }
+        }
+      } catch (err) {
+        console.warn(`[Slack] Failed to fetch history for #${channel.name}:`, err);
+      }
+
+      // Build snapshot data
+      const snapshotData: Record<string, any> = {
+        slackMessages7d: messageCount,
+        slackActiveUsers7d: uniqueUsers.size,
+        slackChannelMembers: channel.num_members || 0,
+        slackChannel: `#${channel.name}`,
+      };
+
+      if (latestMessageTs) {
+        snapshotData.lastLogin = new Date(latestMessageTs * 1000).toISOString().split("T")[0];
+      }
+
+      // Engagement score from 7-day message count
+      if (messageCount === 0) snapshotData.usageScore = 0;
+      else if (messageCount <= 5) snapshotData.usageScore = 30;
+      else if (messageCount <= 15) snapshotData.usageScore = 60;
+      else snapshotData.usageScore = 90;
+
+      // Upsert snapshot
+      const { error: sErr } = await supabase
+        .from("company_snapshots")
+        .upsert(
+          {
+            company_id: company.id,
+            user_id: userId,
+            source: "slack",
+            data: snapshotData,
+          },
+          { onConflict: "company_id,snapshot_date" }
+        );
+
+      if (sErr) {
+        console.error(`[Slack] Failed to upsert snapshot for "${company.name}":`, sErr.message);
+        continue;
+      }
+      imported++;
+    }
+
+    console.log(`[Slack] Enriched ${imported} companies with Slack activity for user ${userId}`);
+    return { records: imported };
   },
 };
 
