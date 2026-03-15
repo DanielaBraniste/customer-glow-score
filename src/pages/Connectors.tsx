@@ -242,7 +242,7 @@ const Connectors = () => {
               const val = input.value.trim();
               if (!val) return;
               if (!user) { toast.error("Please sign in first"); return; }
-              const { error } = await supabase.from("connector_requests").insert({ user_id: user.id, connector_name: val });
+              const { error } = await (supabase.from as any)("connector_requests").insert({ user_id: user.id, connector_name: val });
               if (error) { toast.error("Failed to submit request"); console.error(error); return; }
               toast.success(`Thanks! We've noted your request for "${val}".`);
               input.value = "";
