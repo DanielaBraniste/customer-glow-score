@@ -128,6 +128,19 @@ const callAdmin = async (password: string, action: string, params?: Record<strin
 };
 
 const AdminPanel = () => {
+  // Connector requests
+  interface ConnectorRequest { id: string; user_id: string; connector_name: string; created_at: string; email: string; }
+  const [connectorRequests, setConnectorRequests] = useState<ConnectorRequest[]>([]);
+  const [sortRequests, setSortRequests] = useState<SortConfig>({ key: "", direction: null });
+  const handleSortRequests = (key: string) => setSortRequests((prev) => handleSortToggle(prev, key));
+
+  const fetchRequests = async () => {
+    try {
+      const data = await callAdmin(password, "connector-requests");
+      setConnectorRequests(data.requests || []);
+    } catch {}
+  };
+
   const [authenticated, setAuthenticated] = useState(false);
   const [password, setPassword] = useState("");
   const [users, setUsers] = useState<UserData[]>([]);
