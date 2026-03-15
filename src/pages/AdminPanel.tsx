@@ -482,6 +482,16 @@ const AdminPanel = () => {
           </Button>
         </div>
 
+        <Tabs defaultValue="users">
+          <TabsList className="mb-4">
+            <TabsTrigger value="users">Users ({users.length})</TabsTrigger>
+            <TabsTrigger value="requests">
+              <MessageSquarePlus className="h-3.5 w-3.5 mr-1.5" />
+              Connector Requests ({connectorRequests.length})
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="users">
         <Card>
           <CardContent className="pt-6">
             <Table>
