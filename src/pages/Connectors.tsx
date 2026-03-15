@@ -242,10 +242,15 @@ const Connectors = () => {
               const val = input.value.trim();
               if (!val) return;
               if (!user) { toast.error("Please sign in first"); return; }
-              const { error } = await (supabase.from as any)("connector_requests").insert({ user_id: user.id, connector_name: val });
-              if (error) { toast.error("Failed to submit request"); console.error(error); return; }
-              toast.success(`Thanks! We've noted your request for "${val}".`);
-              input.value = "";
+              try {
+                const { error } = await (supabase.from as any)("connector_requests").insert([{ user_id: user.id, connector_name: val }]);
+                if (error) { toast.error("Failed to submit request: " + error.message); console.error("Insert error:", error); return; }
+                toast.success(`Thanks! We've noted your request for "${val}".`);
+                input.value = "";
+              } catch (err: any) {
+                console.error("Request submit error:", err);
+                toast.error("Something went wrong");
+              }
             }}
             className="flex items-center gap-2 max-w-sm mx-auto"
           >
