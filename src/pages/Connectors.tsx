@@ -349,6 +349,26 @@ const Connectors = () => {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 mt-2">
+            {/* Setup Instructions */}
+            {connectDialog?.instructions && (
+              <div className="rounded-lg border border-border bg-secondary/30 p-3 space-y-2">
+                <p className="text-xs font-medium">Setup Instructions</p>
+                <p className="text-xs text-muted-foreground leading-relaxed">{connectDialog.instructions}</p>
+                {connectDialog.scopes && connectDialog.scopes.length > 0 && (
+                  <div className="pt-1">
+                    <p className="text-[11px] font-medium text-muted-foreground mb-1.5">Required scopes / permissions:</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {connectDialog.scopes.map((scope) => (
+                        <span key={scope} className="inline-block rounded-md bg-primary/10 text-primary border border-primary/20 px-2 py-0.5 text-[10px] font-mono">
+                          {scope}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
             <div className="space-y-2">
               <Label htmlFor="api-key">{connectDialog?.keyLabel}</Label>
               <Input
