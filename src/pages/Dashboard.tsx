@@ -154,9 +154,14 @@ const Dashboard = () => {
                 <p className="text-muted-foreground text-sm">Welcome, {user?.email}</p>
               </div>
             </div>
-            <Button variant="heroOutline" size="sm" onClick={handleSignOut}>
-              <LogOut className="h-4 w-4 mr-2" /> Sign Out
-            </Button>
+            <div className="flex items-center gap-3">
+              <Button variant="ghost" size="icon" onClick={() => setTheme(theme === "dark" ? "light" : "dark")} className="text-muted-foreground hover:text-foreground">
+                {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+              </Button>
+              <Button variant="heroOutline" size="sm" onClick={handleSignOut}>
+                <LogOut className="h-4 w-4 mr-2" /> Sign Out
+              </Button>
+            </div>
           </div>
 
           {/* Stats row */}

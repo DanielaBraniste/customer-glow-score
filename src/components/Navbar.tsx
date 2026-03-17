@@ -1,20 +1,16 @@
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
-import { LogOut, Sun, Moon } from "lucide-react";
-import { useTheme } from "next-themes";
+import { LogOut } from "lucide-react";
 
 const Navbar = () => {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
-  const { theme, setTheme } = useTheme();
 
   const handleSignOut = async () => {
     await signOut();
     navigate("/");
   };
-
-  const toggleTheme = () => setTheme(theme === "dark" ? "light" : "dark");
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 border-b border-border/50 bg-background/80 backdrop-blur-xl">
@@ -31,9 +27,6 @@ const Navbar = () => {
           <a href="#pricing" className="hover:text-foreground transition-colors">Pricing</a>
         </div>
         <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" onClick={toggleTheme} className="text-muted-foreground hover:text-foreground">
-            {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-          </Button>
           {user ? (
             <>
               <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={() => navigate("/dashboard")}>
