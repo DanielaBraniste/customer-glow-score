@@ -1,9 +1,10 @@
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
-import { LogOut, Plus, Search, Building2, TrendingUp, TrendingDown, Minus, Database, Loader2, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import { LogOut, Plus, Search, Building2, TrendingUp, TrendingDown, Minus, Database, Loader2, ArrowUpDown, ArrowUp, ArrowDown, Sun, Moon } from "lucide-react";
 import { Zap } from "lucide-react";
 import UserProfile from "@/components/UserProfile";
+import { useTheme } from "next-themes";
 import { Input } from "@/components/ui/input";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
