@@ -25,7 +25,7 @@ const Hero = () => (
           <span className="text-gradient">before they churn</span>
         </h1>
 
-        <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto mb-10 leading-relaxed">
+        <p className="text-lg md:text-xl text-foreground/80 font-medium max-w-2xl mx-auto mb-10 leading-relaxed">
           Rescuro gives SaaS teams a single health score per account — powered by usage, support, billing &amp; engagement data. No spreadsheets, no guesswork.
         </p>
 
