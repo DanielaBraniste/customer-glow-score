@@ -101,6 +101,7 @@ const getStatusBadge = (status: string) => {
 const Dashboard = () => {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
+  const { theme, setTheme } = useTheme();
   const [search, setSearch] = useState("");
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [sort, setSort] = useState<SortConfig>({ key: "", direction: null });
