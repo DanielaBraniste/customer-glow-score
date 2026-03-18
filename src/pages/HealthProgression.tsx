@@ -52,6 +52,7 @@ const HealthProgression = () => {
   const { data, isLoading } = useHealthProgression(granularity);
   const companies = data?.companies || [];
   const periods = data?.periods || [];
+  const isDemo = data?.isDemo ?? false;
 
   const filtered = useMemo(
     () => companies.filter((c) => c.companyName.toLowerCase().includes(search.toLowerCase())),
