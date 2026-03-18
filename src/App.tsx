@@ -14,6 +14,7 @@ import RawData from "./pages/RawData";
 import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
 import AdminPanel from "./pages/AdminPanel";
+import HealthProgression from "./pages/HealthProgression";
 
 const queryClient = new QueryClient();
 
@@ -40,6 +41,7 @@ const App = () => (
               <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
               <Route path="/connectors" element={<ProtectedRoute><Connectors /></ProtectedRoute>} />
               <Route path="/raw-data" element={<ProtectedRoute><RawData /></ProtectedRoute>} />
+              <Route path="/health-progression" element={<ProtectedRoute><HealthProgression /></ProtectedRoute>} />
               <Route path="/admin-9x7k" element={<AdminPanel />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
