@@ -1,7 +1,7 @@
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
-import { LogOut, ArrowLeft, Sun, Moon, Loader2, Search } from "lucide-react";
+import { LogOut, ArrowLeft, Sun, Moon, Loader2, Search, Info } from "lucide-react";
 import { useTheme } from "next-themes";
 import { Input } from "@/components/ui/input";
 import {
