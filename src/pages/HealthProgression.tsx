@@ -122,6 +122,20 @@ const HealthProgression = () => {
             </Select>
           </div>
 
+          {/* Demo banner */}
+          {isDemo && (
+            <div className="flex items-center gap-2 rounded-lg border border-border bg-muted/50 px-4 py-3 mb-4 text-sm text-muted-foreground">
+              <Info className="h-4 w-4 shrink-0" />
+              <span>
+                Showing demo data. Add companies and import snapshots from the{" "}
+                <button onClick={() => navigate("/dashboard")} className="underline text-foreground font-medium hover:text-primary transition-colors">
+                  Dashboard
+                </button>{" "}
+                to see your real health score progression.
+              </span>
+            </div>
+          )}
+
           {/* Table */}
           <div className="rounded-xl border border-border bg-card overflow-hidden">
             <ScrollArea className="w-full">
