@@ -194,6 +194,9 @@ const Dashboard = () => {
               />
             </div>
             <div className="flex items-center gap-3">
+              <Button variant="heroOutline" size="sm" onClick={() => navigate("/health-progression")}>
+                <TrendingUp className="h-4 w-4 mr-2" /> HS Progression
+              </Button>
               <Button variant="heroOutline" size="sm" onClick={() => navigate("/raw-data")}>
                 <Database className="h-4 w-4 mr-2" /> Raw Data
               </Button>
