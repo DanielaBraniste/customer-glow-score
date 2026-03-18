@@ -1,7 +1,7 @@
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
-import { LogOut, ArrowLeft, Sun, Moon, Loader2, Search } from "lucide-react";
+import { LogOut, ArrowLeft, Sun, Moon, Loader2, Search, Info } from "lucide-react";
 import { useTheme } from "next-themes";
 import { Input } from "@/components/ui/input";
 import {
@@ -52,6 +52,7 @@ const HealthProgression = () => {
   const { data, isLoading } = useHealthProgression(granularity);
   const companies = data?.companies || [];
   const periods = data?.periods || [];
+  const isDemo = data?.isDemo ?? false;
 
   const filtered = useMemo(
     () => companies.filter((c) => c.companyName.toLowerCase().includes(search.toLowerCase())),
@@ -120,6 +121,20 @@ const HealthProgression = () => {
               </SelectContent>
             </Select>
           </div>
+
+          {/* Demo banner */}
+          {isDemo && (
+            <div className="flex items-center gap-2 rounded-lg border border-border bg-muted/50 px-4 py-3 mb-4 text-sm text-muted-foreground">
+              <Info className="h-4 w-4 shrink-0" />
+              <span>
+                Showing demo data. Add companies and import snapshots from the{" "}
+                <button onClick={() => navigate("/dashboard")} className="underline text-foreground font-medium hover:text-primary transition-colors">
+                  Dashboard
+                </button>{" "}
+                to see your real health score progression.
+              </span>
+            </div>
+          )}
 
           {/* Table */}
           <div className="rounded-xl border border-border bg-card overflow-hidden">
