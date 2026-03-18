@@ -14,6 +14,7 @@ import RawData from "./pages/RawData";
 import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
 import AdminPanel from "./pages/AdminPanel";
+import HealthProgression from "./pages/HealthProgression";
 
 const queryClient = new QueryClient();
 
