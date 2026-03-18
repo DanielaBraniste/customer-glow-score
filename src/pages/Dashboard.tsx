@@ -183,8 +183,8 @@ const Dashboard = () => {
           </div>
 
           {/* Toolbar */}
-          <div className="flex items-center justify-between mb-4">
-            <div className="relative w-64">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+            <div className="relative w-full sm:w-64">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Search companies..."
@@ -193,18 +193,18 @@ const Dashboard = () => {
                 className="pl-10"
               />
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 flex-wrap">
               <Button variant="heroOutline" size="sm" onClick={() => navigate("/health-progression")}>
-                <TrendingUp className="h-4 w-4 mr-2" /> HS Progression
+                <TrendingUp className="h-4 w-4 mr-1" /> HS Progression
               </Button>
               <Button variant="heroOutline" size="sm" onClick={() => navigate("/raw-data")}>
-                <Database className="h-4 w-4 mr-2" /> Raw Data
+                <Database className="h-4 w-4 mr-1" /> Raw Data
               </Button>
               <Button variant="heroOutline" size="sm" onClick={() => navigate("/connectors")}>
-                <Zap className="h-4 w-4 mr-2" /> Automated Import
+                <Zap className="h-4 w-4 mr-1" /> Automated Import
               </Button>
               <Button variant="hero" size="sm" onClick={() => setAddDialogOpen(true)}>
-                <Plus className="h-4 w-4 mr-2" /> Add Company
+                <Plus className="h-4 w-4 mr-1" /> Add Company
               </Button>
             </div>
           </div>
