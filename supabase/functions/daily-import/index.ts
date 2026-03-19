@@ -6,6 +6,24 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+// Helper: fetch with a timeout (default 15s) so stalled requests fail fast
+async function fetchWithTimeout(url: string, options: RequestInit & { timeout?: number } = {}): Promise<Response> {
+  const { timeout = 15000, ...fetchOptions } = options;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeout);
+  try {
+    const res = await fetch(url, { ...fetchOptions, signal: controller.signal });
+    return res;
+  } catch (err: unknown) {
+    if (err instanceof DOMException && err.name === "AbortError") {
+      throw new Error(`Request to ${url.split("?")[0]} timed out after ${timeout}ms`);
+    }
+    throw err;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 // Connector-specific import handlers
 const importHandlers: Record<string, (apiKey: string, userId: string, supabase: ReturnType<typeof createClient>) => Promise<{ records: number }>> = {
   hubspot: async (apiKey, userId, supabase) => {
