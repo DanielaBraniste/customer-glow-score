@@ -12,7 +12,7 @@ async function fetchWithTimeout(url: string, options: RequestInit & { timeout?: 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeout);
   try {
-    const res = await fetchWithTimeout(url, { ...fetchOptions, signal: controller.signal });
+    const res = await fetch(url, { ...fetchOptions, signal: controller.signal });
     return res;
   } catch (err: unknown) {
     if (err instanceof DOMException && err.name === "AbortError") {
