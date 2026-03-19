@@ -77,10 +77,12 @@ const importHandlers: Record<string, (apiKey: string, userId: string, supabase: 
       const batch = allCompanies.slice(i, i + ASSOC_BATCH);
       const ids = batch.map((c) => c.id);
       try {
-        const assocRes = await fetch(
+        console.log(`[HubSpot] Fetching ticket associations batch ${Math.floor(i / ASSOC_BATCH) + 1}…`);
+        const assocRes = await fetchWithTimeout(
           "https://api.hubapi.com/crm/v3/associations/companies/tickets/batch/read",
           {
             method: "POST",
+            timeout: 15000,
             headers,
             body: JSON.stringify({ inputs: ids.map((id) => ({ id })) }),
           }
