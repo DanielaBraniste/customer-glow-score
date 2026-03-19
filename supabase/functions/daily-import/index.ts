@@ -1008,6 +1008,7 @@ Deno.serve(async (req) => {
     const results = [];
 
     for (const connector of activeConnectors || []) {
+      console.log(`[daily-import] Processing connector: ${connector.connector_id} for user: ${connector.user_id}`);
       const handler = importHandlers[connector.connector_id];
       if (!handler) {
         console.log(`[daily-import] No handler for connector: ${connector.connector_id}`);
