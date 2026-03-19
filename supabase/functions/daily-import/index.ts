@@ -12,7 +12,7 @@ async function fetchWithTimeout(url: string, options: RequestInit & { timeout?: 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeout);
   try {
-    const res = await fetch(url, { ...fetchOptions, signal: controller.signal });
+    const res = await fetchWithTimeout(url, { ...fetchOptions, signal: controller.signal });
     return res;
   } catch (err: unknown) {
     if (err instanceof DOMException && err.name === "AbortError") {
@@ -204,7 +204,7 @@ const importHandlers: Record<string, (apiKey: string, userId: string, supabase: 
       const body: Record<string, any> = { per_page: 50 };
       if (startingAfter) body.starting_after = startingAfter;
 
-      const res = await fetch("https://api.intercom.io/companies/list", {
+      const res = await fetchWithTimeout("https://api.intercom.io/companies/list", {
         method: "POST",
         headers,
         body: JSON.stringify(body),
@@ -277,7 +277,7 @@ const importHandlers: Record<string, (apiKey: string, userId: string, supabase: 
 
       // supportTickets (core 4/6) — open conversations
       try {
-        const convRes = await fetch("https://api.intercom.io/conversations/search", {
+        const convRes = await fetchWithTimeout("https://api.intercom.io/conversations/search", {
           method: "POST",
           headers,
           body: JSON.stringify({
@@ -366,7 +366,7 @@ const importHandlers: Record<string, (apiKey: string, userId: string, supabase: 
     let url: string | null = `${instanceUrl}/services/data/v59.0/query?q=${soql}`;
 
     while (url) {
-      const res = await fetch(url, { headers });
+      const res = await fetchWithTimeout(url, { headers });
       if (!res.ok) {
         const text = await res.text();
         throw new Error(`Salesforce API error ${res.status}: ${text}`);
@@ -462,7 +462,7 @@ const importHandlers: Record<string, (apiKey: string, userId: string, supabase: 
     const allOrgs: Array<Record<string, any>> = [];
     let url: string | null = `${baseUrl}/organizations.json?page[size]=100`;
     while (url) {
-      const res = await fetch(url, { headers });
+      const res = await fetchWithTimeout(url, { headers });
       if (!res.ok) { const t = await res.text(); throw new Error(`Zendesk API error ${res.status}: ${t}`); }
       const data = await res.json();
       allOrgs.push(...(data.organizations || []));
@@ -503,7 +503,7 @@ const importHandlers: Record<string, (apiKey: string, userId: string, supabase: 
 
       // supportTickets (core 4/6)
       try {
-        const ticketRes = await fetch(`${baseUrl}/organizations/${org.id}/tickets.json?per_page=1`, { headers });
+        const ticketRes = await fetchWithTimeout(`${baseUrl}/organizations/${org.id}/tickets.json?per_page=1`, { headers });
         if (ticketRes.ok) {
           const td = await ticketRes.json();
           snapshotData.supportTickets = td.count || 0;
@@ -554,7 +554,7 @@ const importHandlers: Record<string, (apiKey: string, userId: string, supabase: 
     let hasMore = true;
     while (hasMore) {
       const params = new URLSearchParams({ api_token: apiKey, start: String(start), limit: "500" });
-      const res = await fetch(`${baseUrl}/organizations?${params}`);
+      const res = await fetchWithTimeout(`${baseUrl}/organizations?${params}`);
       if (!res.ok) { const t = await res.text(); throw new Error(`Pipedrive API error ${res.status}: ${t}`); }
       const data = await res.json();
       if (!data.success) throw new Error("Pipedrive API returned success: false");
@@ -598,7 +598,7 @@ const importHandlers: Record<string, (apiKey: string, userId: string, supabase: 
       if (org.won_deals_count > 0) {
         try {
           const dealsParams = new URLSearchParams({ api_token: apiKey, status: "won", limit: "50" });
-          const dealsRes = await fetch(`${baseUrl}/organizations/${org.id}/deals?${dealsParams}`);
+          const dealsRes = await fetchWithTimeout(`${baseUrl}/organizations/${org.id}/deals?${dealsParams}`);
           if (dealsRes.ok) {
             const dealsData = await dealsRes.json();
             const totalValue = (dealsData.data || []).reduce((sum: number, d: any) => sum + (Number(d.value) || 0), 0);
@@ -650,7 +650,7 @@ const importHandlers: Record<string, (apiKey: string, userId: string, supabase: 
     while (hasMore) {
       const params = new URLSearchParams({ limit: "100", "expand[]": "data.subscriptions" });
       if (startingAfter) params.set("starting_after", startingAfter);
-      const res = await fetch(`https://api.stripe.com/v1/customers?${params}`, { headers });
+      const res = await fetchWithTimeout(`https://api.stripe.com/v1/customers?${params}`, { headers });
       if (!res.ok) { const t = await res.text(); throw new Error(`Stripe API error ${res.status}: ${t}`); }
       const data = await res.json();
       allCustomers.push(...(data.data || []));
@@ -687,7 +687,7 @@ const importHandlers: Record<string, (apiKey: string, userId: string, supabase: 
     // Fetch failed invoices for payment failure signal
     const failedInvoices = new Map<string, number>();
     try {
-      const invRes = await fetch(`https://api.stripe.com/v1/invoices?status=open&limit=100`, { headers });
+      const invRes = await fetchWithTimeout(`https://api.stripe.com/v1/invoices?status=open&limit=100`, { headers });
       if (invRes.ok) {
         const invData = await invRes.json();
         for (const inv of invData.data || []) {
@@ -784,7 +784,7 @@ const importHandlers: Record<string, (apiKey: string, userId: string, supabase: 
     while (hasMore) {
       const params = new URLSearchParams({ limit: "100", include: "traits" });
       if (cursor) params.set("cursor", cursor);
-      const res = await fetch(`${baseUrl}?${params}`, { headers });
+      const res = await fetchWithTimeout(`${baseUrl}?${params}`, { headers });
       if (res.status === 404) throw new Error("Segment Profile API 404. Ensure Unify is enabled and Space ID is correct.");
       if (res.status === 401 || res.status === 403) throw new Error("Segment auth failed. Check your Profile API Access Token.");
       if (!res.ok) { const t = await res.text(); throw new Error(`Segment API error ${res.status}: ${t}`); }
@@ -878,7 +878,7 @@ const importHandlers: Record<string, (apiKey: string, userId: string, supabase: 
     do {
       const params = new URLSearchParams({ types: "public_channel,private_channel", limit: "200", exclude_archived: "true" });
       if (cursor) params.set("cursor", cursor);
-      const res = await fetch(`https://slack.com/api/conversations.list?${params}`, { headers });
+      const res = await fetchWithTimeout(`https://slack.com/api/conversations.list?${params}`, { headers });
       if (!res.ok) throw new Error(`Slack HTTP error ${res.status}`);
       const data = await res.json();
       if (!data.ok) throw new Error(`Slack API error: ${data.error || "unknown"}`);
@@ -922,7 +922,7 @@ const importHandlers: Record<string, (apiKey: string, userId: string, supabase: 
 
       try {
         const hParams = new URLSearchParams({ channel: channel.id, limit: "200", oldest: String(sevenDaysAgo) });
-        const hRes = await fetch(`https://slack.com/api/conversations.history?${hParams}`, { headers });
+        const hRes = await fetchWithTimeout(`https://slack.com/api/conversations.history?${hParams}`, { headers });
         if (hRes.ok) {
           const hData = await hRes.json();
           if (hData.ok) {
