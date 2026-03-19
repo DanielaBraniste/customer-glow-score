@@ -49,10 +49,12 @@ const importHandlers: Record<string, (apiKey: string, userId: string, supabase: 
     const allCompanies: Array<{ id: string; properties: Record<string, string | null> }> = [];
     let after: string | undefined;
 
+    console.log(`[HubSpot] Starting companies fetch for user ${userId}`);
     do {
       const params = new URLSearchParams({ limit: "100", properties });
       if (after) params.set("after", after);
-      const res = await fetch(`${baseUrl}?${params}`, { headers });
+      console.log(`[HubSpot] Fetching page (after=${after || "start"})…`);
+      const res = await fetchWithTimeout(`${baseUrl}?${params}`, { headers, timeout: 15000 });
       if (!res.ok) {
         const body = await res.text();
         throw new Error(`HubSpot API error ${res.status}: ${body}`);
@@ -60,6 +62,7 @@ const importHandlers: Record<string, (apiKey: string, userId: string, supabase: 
       const data = await res.json();
       allCompanies.push(...(data.results || []));
       after = data.paging?.next?.after;
+      console.log(`[HubSpot] Got ${data.results?.length || 0} companies (total so far: ${allCompanies.length})`);
     } while (after);
 
     if (allCompanies.length === 0) {
