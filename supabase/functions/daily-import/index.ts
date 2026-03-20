@@ -788,9 +788,8 @@ Deno.serve(async (req) => {
         console.log(`[daily-import] Scheduling next chunk (total so far: ${totalRecords})`);
         // Self-invoke for next chunk
         const anonKey = Deno.env.get("SUPABASE_ANON_KEY") || Deno.env.get("SUPABASE_PUBLISHABLE_KEY") || "";
-        fetchWithTimeout(`${supabaseUrl}/functions/v1/daily-import`, {
+        fetch(`${supabaseUrl}/functions/v1/daily-import`, {
           method: "POST",
-          timeout: 5000,
           headers: {
             "Content-Type": "application/json",
             "Authorization": `Bearer ${anonKey}`,
@@ -857,9 +856,8 @@ Deno.serve(async (req) => {
           }).eq("id", log.id);
 
           const anonKey = Deno.env.get("SUPABASE_ANON_KEY") || Deno.env.get("SUPABASE_PUBLISHABLE_KEY") || "";
-          fetchWithTimeout(`${supabaseUrl}/functions/v1/daily-import`, {
+          fetch(`${supabaseUrl}/functions/v1/daily-import`, {
             method: "POST",
-            timeout: 5000,
             headers: {
               "Content-Type": "application/json",
               "Authorization": `Bearer ${anonKey}`,
