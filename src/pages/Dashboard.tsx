@@ -106,6 +106,17 @@ const Dashboard = () => {
   const [search, setSearch] = useState("");
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [sort, setSort] = useState<SortConfig>({ key: "", direction: null });
+  const [activeConnections, setActiveConnections] = useState(0);
+
+  useEffect(() => {
+    if (!user) return;
+    supabase
+      .from("user_connectors")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", user.id)
+      .eq("is_active", true)
+      .then(({ count }) => setActiveConnections(count || 0));
+  }, [user]);
 
   const { data: rawCompanies = [], isLoading } = useCompanies();
 
