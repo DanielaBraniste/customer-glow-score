@@ -9,7 +9,8 @@ import { Input } from "@/components/ui/input";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import AddCompanyDialog from "@/components/AddCompanyDialog";
 import DeduplicateBanner from "@/components/DeduplicateBanner";
 import { calculateHealthScore, DEFAULT_SCORE_FIELDS } from "@/lib/healthScore";
@@ -105,6 +106,17 @@ const Dashboard = () => {
   const [search, setSearch] = useState("");
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [sort, setSort] = useState<SortConfig>({ key: "", direction: null });
+  const [activeConnections, setActiveConnections] = useState(0);
+
+  useEffect(() => {
+    if (!user) return;
+    supabase
+      .from("user_connectors")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", user.id)
+      .eq("is_active", true)
+      .then(({ count }) => setActiveConnections(count || 0));
+  }, [user]);
 
   const { data: rawCompanies = [], isLoading } = useCompanies();
 
@@ -170,7 +182,7 @@ const Dashboard = () => {
               { label: "Companies", value: String(companies.length), icon: Building2 },
               { label: "Avg Score", value: String(avgScore), icon: TrendingUp },
               { label: "At Risk", value: String(atRiskCount), icon: TrendingDown },
-              { label: "Connections", value: "3", icon: Plus },
+              { label: "Connections", value: String(activeConnections), icon: Plus },
             ].map((stat) => (
               <div key={stat.label} className="rounded-xl border border-border bg-card p-4">
                 <div className="flex items-center gap-2 text-muted-foreground text-sm mb-1">
