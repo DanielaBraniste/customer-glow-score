@@ -182,7 +182,7 @@ const Dashboard = () => {
               { label: "Companies", value: String(companies.length), icon: Building2 },
               { label: "Avg Score", value: String(avgScore), icon: TrendingUp },
               { label: "At Risk", value: String(atRiskCount), icon: TrendingDown },
-              { label: "Connections", value: "3", icon: Plus },
+              { label: "Connections", value: String(activeConnections), icon: Plus },
             ].map((stat) => (
               <div key={stat.label} className="rounded-xl border border-border bg-card p-4">
                 <div className="flex items-center gap-2 text-muted-foreground text-sm mb-1">
