@@ -9,7 +9,8 @@ import { Input } from "@/components/ui/input";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import AddCompanyDialog from "@/components/AddCompanyDialog";
 import DeduplicateBanner from "@/components/DeduplicateBanner";
 import { calculateHealthScore, DEFAULT_SCORE_FIELDS } from "@/lib/healthScore";
