@@ -154,6 +154,31 @@ const Dashboard = () => {
     sort
   );
 
+  const handleDownloadCSV = () => {
+    if (filtered.length === 0) return;
+    const headers = ["Company", "Health Score", "Status", "MRR", "NPS", "Last Login", "Support Tickets", "Contract End", "Usage Score", "Industry"];
+    const rows = filtered.map((c) => [
+      c.name,
+      c.healthScore,
+      c.status,
+      c.snapshotData?.mrr ?? "",
+      c.snapshotData?.nps ?? "",
+      c.snapshotData?.lastLogin ?? "",
+      c.snapshotData?.supportTickets ?? "",
+      c.snapshotData?.contractEnd ?? "",
+      c.snapshotData?.usageScore ?? "",
+      c.industry || "",
+    ]);
+    const csv = [headers, ...rows].map((r) => r.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `health-scores-${new Date().toISOString().split("T")[0]}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <TooltipProvider>
       <div className="min-h-screen bg-background pt-20 px-6">
