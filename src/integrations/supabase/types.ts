@@ -106,6 +106,7 @@ export type Database = {
           connector_id: string
           error_message: string | null
           id: string
+          import_cursor: string | null
           records_imported: number | null
           started_at: string
           status: string
@@ -116,6 +117,7 @@ export type Database = {
           connector_id: string
           error_message?: string | null
           id?: string
+          import_cursor?: string | null
           records_imported?: number | null
           started_at?: string
           status?: string
@@ -126,6 +128,7 @@ export type Database = {
           connector_id?: string
           error_message?: string | null
           id?: string
+          import_cursor?: string | null
           records_imported?: number | null
           started_at?: string
           status?: string
