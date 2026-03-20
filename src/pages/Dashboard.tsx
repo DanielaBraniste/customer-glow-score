@@ -240,6 +240,9 @@ const Dashboard = () => {
               <Button variant="heroOutline" size="sm" onClick={() => navigate("/connectors")}>
                 <Zap className="h-4 w-4 mr-1" /> Automated Import
               </Button>
+              <Button variant="heroOutline" size="sm" onClick={handleDownloadCSV} disabled={filtered.length === 0}>
+                <Download className="h-4 w-4 mr-1" /> Download
+              </Button>
               <Button variant="hero" size="sm" onClick={() => setAddDialogOpen(true)}>
                 <Plus className="h-4 w-4 mr-1" /> Add Company
               </Button>
