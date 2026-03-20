@@ -1,7 +1,7 @@
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
-import { LogOut, Plus, Search, Building2, TrendingUp, TrendingDown, Minus, Database, Loader2, ArrowUpDown, ArrowUp, ArrowDown, Sun, Moon } from "lucide-react";
+import { LogOut, Plus, Search, Building2, TrendingUp, TrendingDown, Minus, Database, Loader2, ArrowUpDown, ArrowUp, ArrowDown, Sun, Moon, Download } from "lucide-react";
 import { Zap } from "lucide-react";
 import UserProfile from "@/components/UserProfile";
 import { useTheme } from "next-themes";
@@ -154,6 +154,31 @@ const Dashboard = () => {
     sort
   );
 
+  const handleDownloadCSV = () => {
+    if (filtered.length === 0) return;
+    const headers = ["Company", "Health Score", "Status", "MRR", "NPS", "Last Login", "Support Tickets", "Contract End", "Usage Score", "Industry"];
+    const rows = filtered.map((c) => [
+      c.name,
+      c.healthScore,
+      c.status,
+      c.snapshotData?.mrr ?? "",
+      c.snapshotData?.nps ?? "",
+      c.snapshotData?.lastLogin ?? "",
+      c.snapshotData?.supportTickets ?? "",
+      c.snapshotData?.contractEnd ?? "",
+      c.snapshotData?.usageScore ?? "",
+      c.industry || "",
+    ]);
+    const csv = [headers, ...rows].map((r) => r.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `health-scores-${new Date().toISOString().split("T")[0]}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <TooltipProvider>
       <div className="min-h-screen bg-background pt-20 px-6">
@@ -214,6 +239,9 @@ const Dashboard = () => {
               </Button>
               <Button variant="heroOutline" size="sm" onClick={() => navigate("/connectors")}>
                 <Zap className="h-4 w-4 mr-1" /> Automated Import
+              </Button>
+              <Button variant="heroOutline" size="sm" onClick={handleDownloadCSV} disabled={filtered.length === 0}>
+                <Download className="h-4 w-4 mr-1" /> Download
               </Button>
               <Button variant="hero" size="sm" onClick={() => setAddDialogOpen(true)}>
                 <Plus className="h-4 w-4 mr-1" /> Add Company
