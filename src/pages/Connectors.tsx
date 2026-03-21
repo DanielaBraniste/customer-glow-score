@@ -18,6 +18,8 @@ import zendeskLogo from "@/assets/connectors/zendesk.png";
 import pipedriveLogo from "@/assets/connectors/pipedrive.png";
 import stripeLogo from "@/assets/connectors/stripe.png";
 import segmentLogo from "@/assets/connectors/segment.png";
+import FieldSelector from "@/components/connectors/FieldSelector";
+import { connectorFields } from "@/components/connectors/connectorFields";
 
 const connectorDefs = [
   {
