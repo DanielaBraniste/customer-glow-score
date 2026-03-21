@@ -178,23 +178,18 @@ const Connectors = () => {
       return;
     }
 
-    // Capture before clearing dialog
     const connectorName = connectDialog.name;
     const connectorId = connectDialog.id;
+    const fieldsArray = Array.from(selectedFields);
 
     setSaving(true);
     try {
       const existing = getConnectorStatus(connectorId);
 
-      // TODO: API keys are stored as plaintext in user_connectors.
-      // For production, encrypt at rest using Supabase Vault (vault.create_secret)
-      // or pgcrypto (pgp_sym_encrypt) with a server-side key.
-      // See: https://supabase.com/docs/guides/database/vault
-
       if (existing) {
         const { error } = await supabase
           .from("user_connectors")
-          .update({ api_key: apiKeyInput.trim(), is_active: true, updated_at: new Date().toISOString() })
+          .update({ api_key: apiKeyInput.trim(), is_active: true, selected_fields: fieldsArray, updated_at: new Date().toISOString() } as any)
           .eq("id", existing.id);
         if (error) throw error;
       } else {
@@ -203,7 +198,8 @@ const Connectors = () => {
           connector_id: connectorId,
           api_key: apiKeyInput.trim(),
           is_active: true,
-        });
+          selected_fields: fieldsArray,
+        } as any);
         if (error) throw error;
       }
 
