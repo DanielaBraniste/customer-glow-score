@@ -94,7 +94,7 @@ async function ensureCompany(
 }
 
 // ======================= HUBSPOT =======================
-const hubspotHandler: Handler = async (apiKey, userId, supabase, cursor) => {
+const hubspotHandler: Handler = async (apiKey, userId, supabase, cursor, selectedFields) => {
   const headers = { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" };
   const properties = [
     "name", "industry", "domain", "annualrevenue",
@@ -172,7 +172,7 @@ const hubspotHandler: Handler = async (apiKey, userId, supabase, cursor) => {
     if (p.lifecyclestage) sd.lifecycleStage = p.lifecyclestage;
     if (p.hs_analytics_num_page_views) sd.pageViews = Number(p.hs_analytics_num_page_views);
 
-    const sErr = await upsertCompanySnapshot(supabase, companyId, userId, "hubspot", sd);
+    const sErr = await upsertCompanySnapshot(supabase, companyId, userId, "hubspot", sd, selectedFields);
     if (sErr) { console.error(`[HubSpot] Snapshot failed "${name}":`, sErr.message); continue; }
     imported++;
   }
@@ -182,7 +182,7 @@ const hubspotHandler: Handler = async (apiKey, userId, supabase, cursor) => {
 };
 
 // ======================= INTERCOM =======================
-const intercomHandler: Handler = async (apiKey, userId, supabase, cursor) => {
+const intercomHandler: Handler = async (apiKey, userId, supabase, cursor, selectedFields) => {
   const headers = { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json", Accept: "application/json", "Intercom-Version": "2.11" };
 
   const batch: Array<Record<string, any>> = [];
@@ -252,7 +252,7 @@ const intercomHandler: Handler = async (apiKey, userId, supabase, cursor) => {
       if (value != null && value !== "") sd[key.replace(/\s+/g, "_").toLowerCase()] = value;
     }
 
-    const sErr = await upsertCompanySnapshot(supabase, companyId, userId, "intercom", sd);
+    const sErr = await upsertCompanySnapshot(supabase, companyId, userId, "intercom", sd, selectedFields);
     if (sErr) { console.error(`[Intercom] Snapshot failed "${name}":`, sErr.message); continue; }
     imported++;
   }
@@ -262,7 +262,7 @@ const intercomHandler: Handler = async (apiKey, userId, supabase, cursor) => {
 };
 
 // ======================= SALESFORCE =======================
-const salesforceHandler: Handler = async (apiKey, userId, supabase, cursor) => {
+const salesforceHandler: Handler = async (apiKey, userId, supabase, cursor, selectedFields) => {
   const sepIdx = apiKey.indexOf("|");
   if (sepIdx === -1) throw new Error("Invalid Salesforce credentials. Expected: instanceUrl|accessToken");
   const instanceUrl = apiKey.substring(0, sepIdx).replace(/\/+$/, "");
@@ -327,7 +327,7 @@ const salesforceHandler: Handler = async (apiKey, userId, supabase, cursor) => {
     if (acct.NumberOfEmployees) sd.employees = Number(acct.NumberOfEmployees);
     if (acct.Rating) sd.rating = acct.Rating;
 
-    const sErr = await upsertCompanySnapshot(supabase, companyId, userId, "salesforce", sd);
+    const sErr = await upsertCompanySnapshot(supabase, companyId, userId, "salesforce", sd, selectedFields);
     if (sErr) { console.error(`[Salesforce] Snapshot failed "${name}":`, sErr.message); continue; }
     imported++;
   }
@@ -337,7 +337,7 @@ const salesforceHandler: Handler = async (apiKey, userId, supabase, cursor) => {
 };
 
 // ======================= ZENDESK =======================
-const zendeskHandler: Handler = async (apiKey, userId, supabase, cursor) => {
+const zendeskHandler: Handler = async (apiKey, userId, supabase, cursor, selectedFields) => {
   const parts = apiKey.split("|");
   if (parts.length < 3) throw new Error("Invalid Zendesk credentials. Expected: subdomain|email/token|apiToken");
   const [subdomain, emailToken, apiToken] = parts;
@@ -396,7 +396,7 @@ const zendeskHandler: Handler = async (apiKey, userId, supabase, cursor) => {
     }
     if (org.tags?.length) sd.tags = org.tags.join(", ");
 
-    const sErr = await upsertCompanySnapshot(supabase, companyId, userId, "zendesk", sd);
+    const sErr = await upsertCompanySnapshot(supabase, companyId, userId, "zendesk", sd, selectedFields);
     if (sErr) { console.error(`[Zendesk] Snapshot failed "${name}":`, sErr.message); continue; }
     imported++;
   }
@@ -406,7 +406,7 @@ const zendeskHandler: Handler = async (apiKey, userId, supabase, cursor) => {
 };
 
 // ======================= PIPEDRIVE =======================
-const pipedriveHandler: Handler = async (apiKey, userId, supabase, cursor) => {
+const pipedriveHandler: Handler = async (apiKey, userId, supabase, cursor, selectedFields) => {
   const baseUrl = "https://api.pipedrive.com/v1";
   let start = cursor.offset || 0;
 
@@ -460,7 +460,7 @@ const pipedriveHandler: Handler = async (apiKey, userId, supabase, cursor) => {
     if (org.lost_deals_count != null) sd.lostDeals = Number(org.lost_deals_count);
     if (org.people_count != null) sd.contacts = Number(org.people_count);
 
-    const sErr = await upsertCompanySnapshot(supabase, companyId, userId, "pipedrive", sd);
+    const sErr = await upsertCompanySnapshot(supabase, companyId, userId, "pipedrive", sd, selectedFields);
     if (sErr) { console.error(`[Pipedrive] Snapshot failed "${name}":`, sErr.message); continue; }
     imported++;
   }
@@ -470,7 +470,7 @@ const pipedriveHandler: Handler = async (apiKey, userId, supabase, cursor) => {
 };
 
 // ======================= STRIPE =======================
-const stripeHandler: Handler = async (apiKey, userId, supabase, cursor) => {
+const stripeHandler: Handler = async (apiKey, userId, supabase, cursor, selectedFields) => {
   const headers = { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/x-www-form-urlencoded" };
 
   const batch: Array<Record<string, any>> = [];
@@ -559,7 +559,7 @@ const stripeHandler: Handler = async (apiKey, userId, supabase, cursor) => {
       if (value && !sd[key] && key !== "industry") sd[key] = value;
     }
 
-    const sErr = await upsertCompanySnapshot(supabase, companyId, userId, "stripe", sd);
+    const sErr = await upsertCompanySnapshot(supabase, companyId, userId, "stripe", sd, selectedFields);
     if (sErr) { console.error(`[Stripe] Snapshot failed "${name}":`, sErr.message); continue; }
     imported++;
   }
@@ -569,7 +569,7 @@ const stripeHandler: Handler = async (apiKey, userId, supabase, cursor) => {
 };
 
 // ======================= SEGMENT =======================
-const segmentHandler: Handler = async (apiKey, userId, supabase, cursor) => {
+const segmentHandler: Handler = async (apiKey, userId, supabase, cursor, selectedFields) => {
   const sepIdx = apiKey.indexOf("|");
   if (sepIdx === -1) throw new Error("Invalid Segment credentials. Expected: spaceId|accessToken");
   const spaceId = apiKey.substring(0, sepIdx);
@@ -634,7 +634,7 @@ const segmentHandler: Handler = async (apiKey, userId, supabase, cursor) => {
       }
     }
 
-    const sErr = await upsertCompanySnapshot(supabase, companyId, userId, "segment", sd);
+    const sErr = await upsertCompanySnapshot(supabase, companyId, userId, "segment", sd, selectedFields);
     if (sErr) { console.error(`[Segment] Snapshot failed "${name}":`, sErr.message); continue; }
     imported++;
   }
@@ -645,7 +645,7 @@ const segmentHandler: Handler = async (apiKey, userId, supabase, cursor) => {
 
 // ======================= SLACK =======================
 // Slack is an enrichment connector — usually small dataset, no chunking needed
-const slackHandler: Handler = async (apiKey, userId, supabase, _cursor) => {
+const slackHandler: Handler = async (apiKey, userId, supabase, _cursor, selectedFields) => {
   const headers = { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" };
 
   const allChannels: Array<Record<string, any>> = [];
@@ -716,7 +716,7 @@ const slackHandler: Handler = async (apiKey, userId, supabase, _cursor) => {
     else if (messageCount <= 40) sd.usageScore = 75;
     else sd.usageScore = 95;
 
-    const sErr = await upsertCompanySnapshot(supabase, company.id, userId, "slack", sd);
+    const sErr = await upsertCompanySnapshot(supabase, company.id, userId, "slack", sd, selectedFields);
     if (sErr) { console.error(`[Slack] Snapshot failed "${company.name}":`, sErr.message); continue; }
     imported++;
   }
