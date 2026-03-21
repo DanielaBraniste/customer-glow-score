@@ -18,6 +18,8 @@ import zendeskLogo from "@/assets/connectors/zendesk.png";
 import pipedriveLogo from "@/assets/connectors/pipedrive.png";
 import stripeLogo from "@/assets/connectors/stripe.png";
 import segmentLogo from "@/assets/connectors/segment.png";
+import FieldSelector from "@/components/connectors/FieldSelector";
+import { connectorFields } from "@/components/connectors/connectorFields";
 
 const connectorDefs = [
   {
@@ -122,6 +124,7 @@ const Connectors = () => {
   const [connectDialog, setConnectDialog] = useState<typeof connectorDefs[0] | null>(null);
   const [apiKeyInput, setApiKeyInput] = useState("");
   const [saving, setSaving] = useState(false);
+  const [selectedFields, setSelectedFields] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (!user) return;
@@ -141,33 +144,52 @@ const Connectors = () => {
   const handleConnect = (connector: typeof connectorDefs[0]) => {
     setConnectDialog(connector);
     setApiKeyInput("");
+    // Initialize selected fields with defaults for this connector
+    const fields = connectorFields[connector.id] || [];
+    setSelectedFields(new Set(fields.filter((f) => f.default).map((f) => f.key)));
   };
 
-  // Fix 9 & 10: error handling, awaited import, TODO for plaintext keys
+  const handleToggleField = (key: string) => {
+    setSelectedFields((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
+
+  const handleSelectAllFields = () => {
+    const fields = connectorFields[connectDialog?.id || ""] || [];
+    setSelectedFields(new Set(fields.map((f) => f.key)));
+  };
+
+  const handleDeselectAllFields = () => {
+    setSelectedFields(new Set());
+  };
+
   const handleSaveConnection = async () => {
     if (!user || !connectDialog) return;
     if (!apiKeyInput.trim()) {
       toast.error("Please enter your API key");
       return;
     }
+    if (selectedFields.size === 0) {
+      toast.error("Please select at least one field to import");
+      return;
+    }
 
-    // Capture before clearing dialog
     const connectorName = connectDialog.name;
     const connectorId = connectDialog.id;
+    const fieldsArray = Array.from(selectedFields);
 
     setSaving(true);
     try {
       const existing = getConnectorStatus(connectorId);
 
-      // TODO: API keys are stored as plaintext in user_connectors.
-      // For production, encrypt at rest using Supabase Vault (vault.create_secret)
-      // or pgcrypto (pgp_sym_encrypt) with a server-side key.
-      // See: https://supabase.com/docs/guides/database/vault
-
       if (existing) {
         const { error } = await supabase
           .from("user_connectors")
-          .update({ api_key: apiKeyInput.trim(), is_active: true, updated_at: new Date().toISOString() })
+          .update({ api_key: apiKeyInput.trim(), is_active: true, selected_fields: fieldsArray, updated_at: new Date().toISOString() } as any)
           .eq("id", existing.id);
         if (error) throw error;
       } else {
@@ -176,7 +198,8 @@ const Connectors = () => {
           connector_id: connectorId,
           api_key: apiKeyInput.trim(),
           is_active: true,
-        });
+          selected_fields: fieldsArray,
+        } as any);
         if (error) throw error;
       }
 
@@ -382,6 +405,15 @@ const Connectors = () => {
                 Your key is stored securely and only used for automated data imports.
               </p>
             </div>
+            {connectDialog && connectorFields[connectDialog.id] && (
+              <FieldSelector
+                fields={connectorFields[connectDialog.id]}
+                selected={selectedFields}
+                onToggle={handleToggleField}
+                onSelectAll={handleSelectAllFields}
+                onDeselectAll={handleDeselectAllFields}
+              />
+            )}
             <div className="rounded-lg border border-border bg-secondary/30 p-3 space-y-1">
               <p className="text-xs font-medium">What happens next?</p>
               <ul className="text-xs text-muted-foreground space-y-0.5">

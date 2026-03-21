@@ -1,0 +1,1 @@
+ALTER TABLE public.user_connectors ADD COLUMN selected_fields jsonb DEFAULT NULL;
