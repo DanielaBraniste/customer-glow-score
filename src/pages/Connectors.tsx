@@ -167,11 +167,14 @@ const Connectors = () => {
     setSelectedFields(new Set());
   };
 
-  // Fix 9 & 10: error handling, awaited import, TODO for plaintext keys
   const handleSaveConnection = async () => {
     if (!user || !connectDialog) return;
     if (!apiKeyInput.trim()) {
       toast.error("Please enter your API key");
+      return;
+    }
+    if (selectedFields.size === 0) {
+      toast.error("Please select at least one field to import");
       return;
     }
 
