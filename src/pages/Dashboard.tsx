@@ -1,7 +1,7 @@
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
-import { LogOut, Plus, Search, Building2, TrendingUp, TrendingDown, Minus, Database, Loader2, ArrowUpDown, ArrowUp, ArrowDown, Sun, Moon, Download } from "lucide-react";
+import { LogOut, Plus, Search, Building2, TrendingUp, TrendingDown, Minus, Database, Loader2, ArrowUpDown, ArrowUp, ArrowDown, Sun, Moon, Download, Trash2, Pencil, MoreHorizontal } from "lucide-react";
 import { Zap } from "lucide-react";
 import UserProfile from "@/components/UserProfile";
 import { useTheme } from "next-themes";
@@ -17,7 +17,17 @@ import { calculateHealthScore, DEFAULT_SCORE_FIELDS } from "@/lib/healthScore";
 import {
   Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { useCompanies } from "@/hooks/useCompanies";
+import { useCompanies, useDeleteCompany, useEditCompany } from "@/hooks/useCompanies";
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 
 // ── Sort utilities ──────────────────────────────────────────────
 type SortDirection = "asc" | "desc" | null;
@@ -107,6 +117,11 @@ const Dashboard = () => {
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [sort, setSort] = useState<SortConfig>({ key: "", direction: null });
   const [activeConnections, setActiveConnections] = useState(0);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
+  const [editTarget, setEditTarget] = useState<{ id: string; name: string; industry: string; email: string } | null>(null);
+
+  const deleteCompany = useDeleteCompany();
+  const editCompany = useEditCompany();
 
   useEffect(() => {
     if (!user) return;
@@ -266,18 +281,19 @@ const Dashboard = () => {
                   <SortableHead label="Health Score" sortKey="healthScore" currentSort={sort} onSort={handleSort} />
                   <SortableHead label="Status" sortKey="healthScore" currentSort={sort} onSort={handleSort} />
                   <SortableHead label="Last Login" sortKey="lastLogin" currentSort={sort} onSort={handleSort} className="text-right" />
+                  <TableHead className="w-10" />
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {isLoading ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center py-12">
+                    <TableCell colSpan={6} className="text-center py-12">
                       <Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" />
                     </TableCell>
                   </TableRow>
                 ) : filtered.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
+                    <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
                       {companies.length === 0
                         ? "No companies yet. Add one manually or import via CSV."
                         : "No companies found."}
@@ -312,12 +328,92 @@ const Dashboard = () => {
                       <TableCell className="text-right text-muted-foreground text-sm">
                         {company.lastLogin}
                       </TableCell>
+                      <TableCell>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => setEditTarget({ id: company.id, name: company.name, industry: company.industry, email: company.email })}>
+                              <Pencil className="h-4 w-4 mr-2" /> Edit
+                            </DropdownMenuItem>
+                            <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => setDeleteTarget({ id: company.id, name: company.name })}>
+                              <Trash2 className="h-4 w-4 mr-2" /> Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
                     </TableRow>
                   ))
                 )}
               </TableBody>
             </Table>
           </div>
+
+          {/* Delete confirmation */}
+          <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Delete "{deleteTarget?.name}"?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This will permanently delete this company and all its snapshot data. This action cannot be undone.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  onClick={() => {
+                    if (deleteTarget) {
+                      deleteCompany.mutate(deleteTarget.id);
+                      setDeleteTarget(null);
+                    }
+                  }}
+                >
+                  Delete
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+
+          {/* Edit dialog */}
+          <Dialog open={!!editTarget} onOpenChange={(open) => !open && setEditTarget(null)}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Edit Company</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4 py-2">
+                <div className="space-y-2">
+                  <Label>Name</Label>
+                  <Input value={editTarget?.name || ""} onChange={(e) => setEditTarget((prev) => prev ? { ...prev, name: e.target.value } : null)} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Industry</Label>
+                  <Input value={editTarget?.industry || ""} onChange={(e) => setEditTarget((prev) => prev ? { ...prev, industry: e.target.value } : null)} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Email</Label>
+                  <Input value={editTarget?.email || ""} onChange={(e) => setEditTarget((prev) => prev ? { ...prev, email: e.target.value } : null)} />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setEditTarget(null)}>Cancel</Button>
+                <Button
+                  disabled={!editTarget?.name?.trim()}
+                  onClick={() => {
+                    if (editTarget) {
+                      editCompany.mutate(editTarget);
+                      setEditTarget(null);
+                    }
+                  }}
+                >
+                  Save
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </div>
       </div>
     </TooltipProvider>
