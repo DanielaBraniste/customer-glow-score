@@ -405,6 +405,15 @@ const Connectors = () => {
                 Your key is stored securely and only used for automated data imports.
               </p>
             </div>
+            {connectDialog && connectorFields[connectDialog.id] && (
+              <FieldSelector
+                fields={connectorFields[connectDialog.id]}
+                selected={selectedFields}
+                onToggle={handleToggleField}
+                onSelectAll={handleSelectAllFields}
+                onDeselectAll={handleDeselectAllFields}
+              />
+            )}
             <div className="rounded-lg border border-border bg-secondary/30 p-3 space-y-1">
               <p className="text-xs font-medium">What happens next?</p>
               <ul className="text-xs text-muted-foreground space-y-0.5">
