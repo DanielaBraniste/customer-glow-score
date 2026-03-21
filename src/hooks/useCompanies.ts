@@ -223,6 +223,65 @@ export function useBulkAddCompanies() {
   });
 }
 
+// --- Delete company ---
+
+export function useDeleteCompany() {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (companyId: string) => {
+      if (!user) throw new Error("Not authenticated");
+
+      // Delete snapshots first (cascade should handle, but be explicit)
+      await supabase
+        .from("company_snapshots")
+        .delete()
+        .eq("company_id", companyId)
+        .eq("user_id", user.id);
+
+      const { error } = await supabase
+        .from("companies")
+        .delete()
+        .eq("id", companyId)
+        .eq("user_id", user.id);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["companies"] });
+      queryClient.invalidateQueries({ queryKey: ["duplicate-companies"] });
+      queryClient.invalidateQueries({ queryKey: ["raw-snapshots"] });
+      toast.success("Company deleted");
+    },
+  });
+}
+
+// --- Edit company ---
+
+export function useEditCompany() {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (input: { id: string; name: string; industry: string; email: string }) => {
+      if (!user) throw new Error("Not authenticated");
+
+      const { error } = await supabase
+        .from("companies")
+        .update({ name: input.name, industry: input.industry, email: input.email })
+        .eq("id", input.id)
+        .eq("user_id", user.id);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["companies"] });
+      toast.success("Company updated");
+    },
+  });
+}
+
 // --- Deduplication ---
 
 export interface DuplicateGroup {
