@@ -855,7 +855,7 @@ Deno.serve(async (req) => {
       }).select().single();
 
       try {
-        const result = await handler(connector.api_key, connector.user_id, supabase, {});
+        const result = await handler(connector.api_key, connector.user_id, supabase, {}, connector.selected_fields);
 
         if (result.nextCursor && log) {
           // More chunks needed — update log and self-invoke
