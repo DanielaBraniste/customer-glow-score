@@ -40,7 +40,7 @@ function parseCursor(raw: string | null | undefined): ImportCursor {
 // Each handler now: fetches up to BATCH_SIZE items from the API (using cursor),
 // processes them, and returns { records, nextCursor? }
 type HandlerResult = { records: number; nextCursor?: string };
-type Handler = (apiKey: string, userId: string, supabase: ReturnType<typeof createClient>, cursor: ImportCursor) => Promise<HandlerResult>;
+type Handler = (apiKey: string, userId: string, supabase: ReturnType<typeof createClient>, cursor: ImportCursor, selectedFields?: string[] | null) => Promise<HandlerResult>;
 
 // ---------- Shared helper: load existing companies for a user ----------
 async function loadCompanyMap(supabase: ReturnType<typeof createClient>, userId: string) {
