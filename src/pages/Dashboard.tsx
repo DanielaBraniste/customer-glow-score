@@ -281,18 +281,19 @@ const Dashboard = () => {
                   <SortableHead label="Health Score" sortKey="healthScore" currentSort={sort} onSort={handleSort} />
                   <SortableHead label="Status" sortKey="healthScore" currentSort={sort} onSort={handleSort} />
                   <SortableHead label="Last Login" sortKey="lastLogin" currentSort={sort} onSort={handleSort} className="text-right" />
+                  <TableHead className="w-10" />
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {isLoading ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center py-12">
+                    <TableCell colSpan={6} className="text-center py-12">
                       <Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" />
                     </TableCell>
                   </TableRow>
                 ) : filtered.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
+                    <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
                       {companies.length === 0
                         ? "No companies yet. Add one manually or import via CSV."
                         : "No companies found."}
@@ -327,12 +328,92 @@ const Dashboard = () => {
                       <TableCell className="text-right text-muted-foreground text-sm">
                         {company.lastLogin}
                       </TableCell>
+                      <TableCell>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => setEditTarget({ id: company.id, name: company.name, industry: company.industry, email: company.email })}>
+                              <Pencil className="h-4 w-4 mr-2" /> Edit
+                            </DropdownMenuItem>
+                            <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => setDeleteTarget({ id: company.id, name: company.name })}>
+                              <Trash2 className="h-4 w-4 mr-2" /> Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
                     </TableRow>
                   ))
                 )}
               </TableBody>
             </Table>
           </div>
+
+          {/* Delete confirmation */}
+          <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Delete "{deleteTarget?.name}"?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This will permanently delete this company and all its snapshot data. This action cannot be undone.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  onClick={() => {
+                    if (deleteTarget) {
+                      deleteCompany.mutate(deleteTarget.id);
+                      setDeleteTarget(null);
+                    }
+                  }}
+                >
+                  Delete
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+
+          {/* Edit dialog */}
+          <Dialog open={!!editTarget} onOpenChange={(open) => !open && setEditTarget(null)}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Edit Company</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4 py-2">
+                <div className="space-y-2">
+                  <Label>Name</Label>
+                  <Input value={editTarget?.name || ""} onChange={(e) => setEditTarget((prev) => prev ? { ...prev, name: e.target.value } : null)} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Industry</Label>
+                  <Input value={editTarget?.industry || ""} onChange={(e) => setEditTarget((prev) => prev ? { ...prev, industry: e.target.value } : null)} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Email</Label>
+                  <Input value={editTarget?.email || ""} onChange={(e) => setEditTarget((prev) => prev ? { ...prev, email: e.target.value } : null)} />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setEditTarget(null)}>Cancel</Button>
+                <Button
+                  disabled={!editTarget?.name?.trim()}
+                  onClick={() => {
+                    if (editTarget) {
+                      editCompany.mutate(editTarget);
+                      setEditTarget(null);
+                    }
+                  }}
+                >
+                  Save
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </div>
       </div>
     </TooltipProvider>
