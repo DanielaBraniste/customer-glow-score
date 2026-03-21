@@ -228,6 +228,7 @@ export type Database = {
           id: string
           is_active: boolean
           last_import_at: string | null
+          selected_fields: Json | null
           updated_at: string
           user_id: string
         }
@@ -238,6 +239,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           last_import_at?: string | null
+          selected_fields?: Json | null
           updated_at?: string
           user_id: string
         }
@@ -248,6 +250,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           last_import_at?: string | null
+          selected_fields?: Json | null
           updated_at?: string
           user_id?: string
         }
