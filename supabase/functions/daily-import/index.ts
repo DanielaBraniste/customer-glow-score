@@ -781,7 +781,7 @@ Deno.serve(async (req) => {
       if (!handler) throw new Error(`No handler for ${filterConnectorId}`);
 
       const cursor = parseCursor(resumeCursor);
-      const result = await handler(connector.api_key, filterUserId, supabase, cursor);
+      const result = await handler(connector.api_key, filterUserId, supabase, cursor, connector.selected_fields);
 
       // Update the existing log with cumulative records
       const { data: existingLog } = await supabase.from("import_logs").select("records_imported").eq("id", resumeLogId).single();
