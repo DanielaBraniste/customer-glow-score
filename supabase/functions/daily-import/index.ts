@@ -54,11 +54,20 @@ async function upsertCompanySnapshot(
   userId: string,
   source: string,
   snapshotData: Record<string, any>,
+  selectedFields?: string[] | null,
 ) {
+  // Filter snapshot data to only include selected fields (if specified)
+  let filteredData = snapshotData;
+  if (selectedFields && selectedFields.length > 0) {
+    filteredData = {};
+    for (const key of selectedFields) {
+      if (key in snapshotData) filteredData[key] = snapshotData[key];
+    }
+  }
   const { error } = await supabase
     .from("company_snapshots")
     .upsert(
-      { company_id: companyId, user_id: userId, source, data: snapshotData },
+      { company_id: companyId, user_id: userId, source, data: filteredData },
       { onConflict: "company_id,snapshot_date" }
     );
   return error;
