@@ -124,6 +124,7 @@ const Connectors = () => {
   const [connectDialog, setConnectDialog] = useState<typeof connectorDefs[0] | null>(null);
   const [apiKeyInput, setApiKeyInput] = useState("");
   const [saving, setSaving] = useState(false);
+  const [selectedFields, setSelectedFields] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (!user) return;
