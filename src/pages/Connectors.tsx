@@ -144,6 +144,27 @@ const Connectors = () => {
   const handleConnect = (connector: typeof connectorDefs[0]) => {
     setConnectDialog(connector);
     setApiKeyInput("");
+    // Initialize selected fields with defaults for this connector
+    const fields = connectorFields[connector.id] || [];
+    setSelectedFields(new Set(fields.filter((f) => f.default).map((f) => f.key)));
+  };
+
+  const handleToggleField = (key: string) => {
+    setSelectedFields((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
+
+  const handleSelectAllFields = () => {
+    const fields = connectorFields[connectDialog?.id || ""] || [];
+    setSelectedFields(new Set(fields.map((f) => f.key)));
+  };
+
+  const handleDeselectAllFields = () => {
+    setSelectedFields(new Set());
   };
 
   // Fix 9 & 10: error handling, awaited import, TODO for plaintext keys
