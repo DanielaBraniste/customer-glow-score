@@ -1,7 +1,7 @@
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
-import { LogOut, Plus, Search, Building2, TrendingUp, TrendingDown, Minus, Database, Loader2, ArrowUpDown, ArrowUp, ArrowDown, Sun, Moon, Download } from "lucide-react";
+import { LogOut, Plus, Search, Building2, TrendingUp, TrendingDown, Minus, Database, Loader2, ArrowUpDown, ArrowUp, ArrowDown, Sun, Moon, Download, Trash2, Pencil, MoreHorizontal } from "lucide-react";
 import { Zap } from "lucide-react";
 import UserProfile from "@/components/UserProfile";
 import { useTheme } from "next-themes";
@@ -17,7 +17,17 @@ import { calculateHealthScore, DEFAULT_SCORE_FIELDS } from "@/lib/healthScore";
 import {
   Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { useCompanies } from "@/hooks/useCompanies";
+import { useCompanies, useDeleteCompany, useEditCompany } from "@/hooks/useCompanies";
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 
 // ── Sort utilities ──────────────────────────────────────────────
 type SortDirection = "asc" | "desc" | null;
