@@ -117,6 +117,11 @@ const Dashboard = () => {
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [sort, setSort] = useState<SortConfig>({ key: "", direction: null });
   const [activeConnections, setActiveConnections] = useState(0);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
+  const [editTarget, setEditTarget] = useState<{ id: string; name: string; industry: string; email: string } | null>(null);
+
+  const deleteCompany = useDeleteCompany();
+  const editCompany = useEditCompany();
 
   useEffect(() => {
     if (!user) return;
