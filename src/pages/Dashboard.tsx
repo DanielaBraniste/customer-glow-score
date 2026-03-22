@@ -17,7 +17,8 @@ import { calculateHealthScore, DEFAULT_SCORE_FIELDS } from "@/lib/healthScore";
 import {
   Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { useCompanies, useDeleteCompany, useEditCompany } from "@/hooks/useCompanies";
+import { useCompanies, useDeleteCompany, useEditCompany, useBulkDeleteCompanies, useBulkEditCompanies } from "@/hooks/useCompanies";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
