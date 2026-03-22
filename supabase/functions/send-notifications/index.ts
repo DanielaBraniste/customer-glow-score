@@ -70,14 +70,15 @@ const isDue = (frequency: string, lastNotified: string | null): boolean => {
   const last = new Date(lastNotified).getTime();
   const now = Date.now();
   const hoursSince = (now - last) / (1000 * 60 * 60);
+  const today = new Date().getUTCDay(); // 0=Sun, 1=Mon
 
   switch (frequency) {
     case "daily": return hoursSince >= 20;
-    case "weekly": return hoursSince >= 144;
-    case "biweekly": return hoursSince >= 312;
-    case "monthly": return hoursSince >= 672;
-    case "quarterly": return hoursSince >= 2016;
-    default: return hoursSince >= 144;
+    case "weekly": return hoursSince >= 144 && today === 1; // Monday
+    case "biweekly": return hoursSince >= 312 && today === 1;
+    case "monthly": return hoursSince >= 672 && today === 1;
+    case "quarterly": return hoursSince >= 2016 && today === 1;
+    default: return hoursSince >= 144 && today === 1;
   }
 };
 
