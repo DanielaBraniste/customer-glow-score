@@ -120,9 +120,16 @@ const Dashboard = () => {
   const [activeConnections, setActiveConnections] = useState(0);
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
   const [editTarget, setEditTarget] = useState<{ id: string; name: string; industry: string; email: string } | null>(null);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+  const [bulkEditOpen, setBulkEditOpen] = useState(false);
+  const [bulkEditData, setBulkEditData] = useState<{ industry: string; email: string }>({ industry: "", email: "" });
+  const [bulkEditFields, setBulkEditFields] = useState<{ industry: boolean; email: boolean }>({ industry: false, email: false });
 
   const deleteCompany = useDeleteCompany();
   const editCompany = useEditCompany();
+  const bulkDelete = useBulkDeleteCompanies();
+  const bulkEdit = useBulkEditCompanies();
 
   useEffect(() => {
     if (!user) return;
