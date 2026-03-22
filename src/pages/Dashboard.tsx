@@ -480,6 +480,79 @@ const Dashboard = () => {
               </DialogFooter>
             </DialogContent>
           </Dialog>
+
+          {/* Bulk delete confirmation */}
+          <AlertDialog open={bulkDeleteOpen} onOpenChange={setBulkDeleteOpen}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Delete {selected.size} {selected.size === 1 ? "company" : "companies"}?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This will permanently delete the selected {selected.size === 1 ? "company" : "companies"} and all associated snapshot data. This action cannot be undone.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  onClick={() => {
+                    bulkDelete.mutate(Array.from(selected));
+                    setSelected(new Set());
+                    setBulkDeleteOpen(false);
+                  }}
+                >
+                  Delete All
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+
+          {/* Bulk edit dialog */}
+          <Dialog open={bulkEditOpen} onOpenChange={setBulkEditOpen}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Bulk Edit {selected.size} {selected.size === 1 ? "Company" : "Companies"}</DialogTitle>
+              </DialogHeader>
+              <p className="text-sm text-muted-foreground">
+                Check the fields you want to update. Only checked fields will be changed across all selected companies.
+              </p>
+              <div className="space-y-4 py-2">
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Checkbox checked={bulkEditFields.industry} onCheckedChange={(v) => setBulkEditFields((p) => ({ ...p, industry: !!v }))} id="bulk-industry" />
+                    <Label htmlFor="bulk-industry">Industry</Label>
+                  </div>
+                  {bulkEditFields.industry && (
+                    <Input placeholder="New industry value (leave empty to clear)" value={bulkEditData.industry} onChange={(e) => setBulkEditData((p) => ({ ...p, industry: e.target.value }))} />
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Checkbox checked={bulkEditFields.email} onCheckedChange={(v) => setBulkEditFields((p) => ({ ...p, email: !!v }))} id="bulk-email" />
+                    <Label htmlFor="bulk-email">Email</Label>
+                  </div>
+                  {bulkEditFields.email && (
+                    <Input placeholder="New email value (leave empty to clear)" value={bulkEditData.email} onChange={(e) => setBulkEditData((p) => ({ ...p, email: e.target.value }))} />
+                  )}
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setBulkEditOpen(false)}>Cancel</Button>
+                <Button
+                  disabled={!bulkEditFields.industry && !bulkEditFields.email}
+                  onClick={() => {
+                    const updates: { industry?: string; email?: string } = {};
+                    if (bulkEditFields.industry) updates.industry = bulkEditData.industry;
+                    if (bulkEditFields.email) updates.email = bulkEditData.email;
+                    bulkEdit.mutate({ companyIds: Array.from(selected), updates });
+                    setSelected(new Set());
+                    setBulkEditOpen(false);
+                  }}
+                >
+                  Apply to {selected.size} {selected.size === 1 ? "Company" : "Companies"}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </div>
       </div>
     </TooltipProvider>
