@@ -346,13 +346,13 @@ const Dashboard = () => {
               <TableBody>
                 {isLoading ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-12">
+                    <TableCell colSpan={7} className="text-center py-12">
                       <Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" />
                     </TableCell>
                   </TableRow>
                 ) : filtered.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                    <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
                       {companies.length === 0
                         ? "No companies yet. Add one manually or import via CSV."
                         : "No companies found."}
@@ -360,7 +360,14 @@ const Dashboard = () => {
                   </TableRow>
                 ) : (
                   filtered.map((company) => (
-                    <TableRow key={company.id} className="cursor-pointer">
+                    <TableRow key={company.id} className={`cursor-pointer ${selected.has(company.id) ? "bg-primary/5" : ""}`}>
+                      <TableCell>
+                        <Checkbox
+                          checked={selected.has(company.id)}
+                          onCheckedChange={() => toggleSelect(company.id)}
+                          aria-label={`Select ${company.name}`}
+                        />
+                      </TableCell>
                       <TableCell className="font-medium">{company.name}</TableCell>
                       <TableCell className="text-muted-foreground">{company.industry}</TableCell>
                       <TableCell>
