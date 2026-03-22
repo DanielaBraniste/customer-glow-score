@@ -1,7 +1,7 @@
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
-import { LogOut, Plus, Search, Building2, TrendingUp, TrendingDown, Minus, Database, Loader2, ArrowUpDown, ArrowUp, ArrowDown, Sun, Moon, Download, Trash2, Pencil, MoreHorizontal } from "lucide-react";
+import { LogOut, Plus, Search, Building2, TrendingUp, TrendingDown, Minus, Database, Loader2, ArrowUpDown, ArrowUp, ArrowDown, Sun, Moon, Download, Trash2, Pencil, MoreHorizontal, CheckSquare } from "lucide-react";
 import { Zap } from "lucide-react";
 import UserProfile from "@/components/UserProfile";
 import { useTheme } from "next-themes";
@@ -17,7 +17,8 @@ import { calculateHealthScore, DEFAULT_SCORE_FIELDS } from "@/lib/healthScore";
 import {
   Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { useCompanies, useDeleteCompany, useEditCompany } from "@/hooks/useCompanies";
+import { useCompanies, useDeleteCompany, useEditCompany, useBulkDeleteCompanies, useBulkEditCompanies } from "@/hooks/useCompanies";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
@@ -119,9 +120,16 @@ const Dashboard = () => {
   const [activeConnections, setActiveConnections] = useState(0);
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
   const [editTarget, setEditTarget] = useState<{ id: string; name: string; industry: string; email: string } | null>(null);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+  const [bulkEditOpen, setBulkEditOpen] = useState(false);
+  const [bulkEditData, setBulkEditData] = useState<{ industry: string; email: string }>({ industry: "", email: "" });
+  const [bulkEditFields, setBulkEditFields] = useState<{ industry: boolean; email: boolean }>({ industry: false, email: false });
 
   const deleteCompany = useDeleteCompany();
   const editCompany = useEditCompany();
+  const bulkDelete = useBulkDeleteCompanies();
+  const bulkEdit = useBulkEditCompanies();
 
   useEffect(() => {
     if (!user) return;
@@ -168,6 +176,19 @@ const Dashboard = () => {
     companies.filter((c) => c.name.toLowerCase().includes(search.toLowerCase())),
     sort
   );
+
+  const toggleSelect = (id: string) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selected.size === filtered.length) setSelected(new Set());
+    else setSelected(new Set(filtered.map((c) => c.id)));
+  };
 
   const handleDownloadCSV = () => {
     if (filtered.length === 0) return;
@@ -271,11 +292,49 @@ const Dashboard = () => {
 
           <DeduplicateBanner />
 
+          {/* Bulk action bar */}
+          {selected.size > 0 && (
+            <div className="flex items-center gap-3 mb-3 p-3 rounded-lg border border-primary/30 bg-primary/5">
+              <span className="text-sm font-medium">{selected.size} selected</span>
+              <div className="flex items-center gap-2 ml-auto">
+                <Button
+                  variant="heroOutline"
+                  size="sm"
+                  onClick={() => {
+                    setBulkEditData({ industry: "", email: "" });
+                    setBulkEditFields({ industry: false, email: false });
+                    setBulkEditOpen(true);
+                  }}
+                >
+                  <Pencil className="h-3.5 w-3.5 mr-1.5" /> Bulk Edit
+                </Button>
+                <Button
+                  variant="heroOutline"
+                  size="sm"
+                  className="text-destructive border-destructive/30 hover:bg-destructive/10"
+                  onClick={() => setBulkDeleteOpen(true)}
+                >
+                  <Trash2 className="h-3.5 w-3.5 mr-1.5" /> Delete Selected
+                </Button>
+                <Button variant="ghost" size="sm" onClick={() => setSelected(new Set())}>
+                  Clear
+                </Button>
+              </div>
+            </div>
+          )}
+
           {/* Table */}
           <div className="rounded-xl border border-border bg-card overflow-hidden">
             <Table>
               <TableHeader>
                 <TableRow className="hover:bg-transparent">
+                  <TableHead className="w-10">
+                    <Checkbox
+                      checked={filtered.length > 0 && selected.size === filtered.length}
+                      onCheckedChange={toggleSelectAll}
+                      aria-label="Select all"
+                    />
+                  </TableHead>
                   <SortableHead label="Company" sortKey="name" currentSort={sort} onSort={handleSort} />
                   <SortableHead label="Industry" sortKey="industry" currentSort={sort} onSort={handleSort} />
                   <SortableHead label="Health Score" sortKey="healthScore" currentSort={sort} onSort={handleSort} />
@@ -287,13 +346,13 @@ const Dashboard = () => {
               <TableBody>
                 {isLoading ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-12">
+                    <TableCell colSpan={7} className="text-center py-12">
                       <Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" />
                     </TableCell>
                   </TableRow>
                 ) : filtered.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                    <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
                       {companies.length === 0
                         ? "No companies yet. Add one manually or import via CSV."
                         : "No companies found."}
@@ -301,7 +360,14 @@ const Dashboard = () => {
                   </TableRow>
                 ) : (
                   filtered.map((company) => (
-                    <TableRow key={company.id} className="cursor-pointer">
+                    <TableRow key={company.id} className={`cursor-pointer ${selected.has(company.id) ? "bg-primary/5" : ""}`}>
+                      <TableCell>
+                        <Checkbox
+                          checked={selected.has(company.id)}
+                          onCheckedChange={() => toggleSelect(company.id)}
+                          aria-label={`Select ${company.name}`}
+                        />
+                      </TableCell>
                       <TableCell className="font-medium">{company.name}</TableCell>
                       <TableCell className="text-muted-foreground">{company.industry}</TableCell>
                       <TableCell>
@@ -410,6 +476,79 @@ const Dashboard = () => {
                   }}
                 >
                   Save
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          {/* Bulk delete confirmation */}
+          <AlertDialog open={bulkDeleteOpen} onOpenChange={setBulkDeleteOpen}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Delete {selected.size} {selected.size === 1 ? "company" : "companies"}?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This will permanently delete the selected {selected.size === 1 ? "company" : "companies"} and all associated snapshot data. This action cannot be undone.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  onClick={() => {
+                    bulkDelete.mutate(Array.from(selected));
+                    setSelected(new Set());
+                    setBulkDeleteOpen(false);
+                  }}
+                >
+                  Delete All
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+
+          {/* Bulk edit dialog */}
+          <Dialog open={bulkEditOpen} onOpenChange={setBulkEditOpen}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Bulk Edit {selected.size} {selected.size === 1 ? "Company" : "Companies"}</DialogTitle>
+              </DialogHeader>
+              <p className="text-sm text-muted-foreground">
+                Check the fields you want to update. Only checked fields will be changed across all selected companies.
+              </p>
+              <div className="space-y-4 py-2">
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Checkbox checked={bulkEditFields.industry} onCheckedChange={(v) => setBulkEditFields((p) => ({ ...p, industry: !!v }))} id="bulk-industry" />
+                    <Label htmlFor="bulk-industry">Industry</Label>
+                  </div>
+                  {bulkEditFields.industry && (
+                    <Input placeholder="New industry value (leave empty to clear)" value={bulkEditData.industry} onChange={(e) => setBulkEditData((p) => ({ ...p, industry: e.target.value }))} />
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Checkbox checked={bulkEditFields.email} onCheckedChange={(v) => setBulkEditFields((p) => ({ ...p, email: !!v }))} id="bulk-email" />
+                    <Label htmlFor="bulk-email">Email</Label>
+                  </div>
+                  {bulkEditFields.email && (
+                    <Input placeholder="New email value (leave empty to clear)" value={bulkEditData.email} onChange={(e) => setBulkEditData((p) => ({ ...p, email: e.target.value }))} />
+                  )}
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setBulkEditOpen(false)}>Cancel</Button>
+                <Button
+                  disabled={!bulkEditFields.industry && !bulkEditFields.email}
+                  onClick={() => {
+                    const updates: { industry?: string; email?: string } = {};
+                    if (bulkEditFields.industry) updates.industry = bulkEditData.industry;
+                    if (bulkEditFields.email) updates.email = bulkEditData.email;
+                    bulkEdit.mutate({ companyIds: Array.from(selected), updates });
+                    setSelected(new Set());
+                    setBulkEditOpen(false);
+                  }}
+                >
+                  Apply to {selected.size} {selected.size === 1 ? "Company" : "Companies"}
                 </Button>
               </DialogFooter>
             </DialogContent>
