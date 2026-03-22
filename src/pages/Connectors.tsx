@@ -357,7 +357,7 @@ const Connectors = () => {
 
       {/* Connect Dialog */}
       <Dialog open={!!connectDialog} onOpenChange={(v) => !v && setConnectDialog(null)}>
-        <DialogContent className="sm:max-w-md bg-card border-border">
+        <DialogContent className="sm:max-w-md bg-card border-border max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-3">
               {connectDialog && (
