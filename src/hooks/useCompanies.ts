@@ -257,6 +257,75 @@ export function useDeleteCompany() {
   });
 }
 
+// --- Bulk delete companies ---
+
+export function useBulkDeleteCompanies() {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (companyIds: string[]) => {
+      if (!user) throw new Error("Not authenticated");
+      if (!companyIds.length) return 0;
+
+      // Delete snapshots first
+      await supabase
+        .from("company_snapshots")
+        .delete()
+        .in("company_id", companyIds)
+        .eq("user_id", user.id);
+
+      const { error } = await supabase
+        .from("companies")
+        .delete()
+        .in("id", companyIds)
+        .eq("user_id", user.id);
+
+      if (error) throw error;
+      return companyIds.length;
+    },
+    onSuccess: (count) => {
+      queryClient.invalidateQueries({ queryKey: ["companies"] });
+      queryClient.invalidateQueries({ queryKey: ["duplicate-companies"] });
+      queryClient.invalidateQueries({ queryKey: ["raw-snapshots"] });
+      toast.success(`Deleted ${count} ${count === 1 ? "company" : "companies"}`);
+    },
+  });
+}
+
+// --- Bulk edit companies ---
+
+export function useBulkEditCompanies() {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (input: { companyIds: string[]; updates: { industry?: string; email?: string } }) => {
+      if (!user) throw new Error("Not authenticated");
+      if (!input.companyIds.length) return 0;
+
+      const cleanUpdates: Record<string, string> = {};
+      if (input.updates.industry !== undefined) cleanUpdates.industry = input.updates.industry;
+      if (input.updates.email !== undefined) cleanUpdates.email = input.updates.email;
+
+      if (!Object.keys(cleanUpdates).length) return 0;
+
+      const { error } = await supabase
+        .from("companies")
+        .update(cleanUpdates)
+        .in("id", input.companyIds)
+        .eq("user_id", user.id);
+
+      if (error) throw error;
+      return input.companyIds.length;
+    },
+    onSuccess: (count) => {
+      queryClient.invalidateQueries({ queryKey: ["companies"] });
+      toast.success(`Updated ${count} ${count === 1 ? "company" : "companies"}`);
+    },
+  });
+}
+
 // --- Edit company ---
 
 export function useEditCompany() {
