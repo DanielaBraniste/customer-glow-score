@@ -292,11 +292,49 @@ const Dashboard = () => {
 
           <DeduplicateBanner />
 
+          {/* Bulk action bar */}
+          {selected.size > 0 && (
+            <div className="flex items-center gap-3 mb-3 p-3 rounded-lg border border-primary/30 bg-primary/5">
+              <span className="text-sm font-medium">{selected.size} selected</span>
+              <div className="flex items-center gap-2 ml-auto">
+                <Button
+                  variant="heroOutline"
+                  size="sm"
+                  onClick={() => {
+                    setBulkEditData({ industry: "", email: "" });
+                    setBulkEditFields({ industry: false, email: false });
+                    setBulkEditOpen(true);
+                  }}
+                >
+                  <Pencil className="h-3.5 w-3.5 mr-1.5" /> Bulk Edit
+                </Button>
+                <Button
+                  variant="heroOutline"
+                  size="sm"
+                  className="text-destructive border-destructive/30 hover:bg-destructive/10"
+                  onClick={() => setBulkDeleteOpen(true)}
+                >
+                  <Trash2 className="h-3.5 w-3.5 mr-1.5" /> Delete Selected
+                </Button>
+                <Button variant="ghost" size="sm" onClick={() => setSelected(new Set())}>
+                  Clear
+                </Button>
+              </div>
+            </div>
+          )}
+
           {/* Table */}
           <div className="rounded-xl border border-border bg-card overflow-hidden">
             <Table>
               <TableHeader>
                 <TableRow className="hover:bg-transparent">
+                  <TableHead className="w-10">
+                    <Checkbox
+                      checked={filtered.length > 0 && selected.size === filtered.length}
+                      onCheckedChange={toggleSelectAll}
+                      aria-label="Select all"
+                    />
+                  </TableHead>
                   <SortableHead label="Company" sortKey="name" currentSort={sort} onSort={handleSort} />
                   <SortableHead label="Industry" sortKey="industry" currentSort={sort} onSort={handleSort} />
                   <SortableHead label="Health Score" sortKey="healthScore" currentSort={sort} onSort={handleSort} />
