@@ -177,6 +177,19 @@ const Dashboard = () => {
     sort
   );
 
+  const toggleSelect = (id: string) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selected.size === filtered.length) setSelected(new Set());
+    else setSelected(new Set(filtered.map((c) => c.id)));
+  };
+
   const handleDownloadCSV = () => {
     if (filtered.length === 0) return;
     const headers = ["Company", "Health Score", "Status", "MRR", "NPS", "Last Login", "Support Tickets", "Contract End", "Usage Score", "Industry"];
