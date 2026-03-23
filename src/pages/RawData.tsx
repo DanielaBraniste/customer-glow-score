@@ -183,7 +183,7 @@ const RawData = () => {
 
       const companyMap = new Map<string, { id: string; name: string; industry: string | null }>(allCompanies.map((c) => [c.id, c]));
 
-      return (snaps || []).map((s) => {
+      return allSnaps.map((s) => {
         const company = companyMap.get(s.company_id);
         return {
           id: s.id,
