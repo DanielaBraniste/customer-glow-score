@@ -1,6 +1,6 @@
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Database, Calendar, Filter, Settings2, Plus, X, GripVertical, Loader2, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import { ArrowLeft, Database, Calendar, Filter, Settings2, Plus, X, GripVertical, Loader2, ArrowUpDown, ArrowUp, ArrowDown, Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -13,10 +13,13 @@ import {
 } from "@/components/ui/table";
 import { useState, useEffect, useMemo } from "react";
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter,
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
 // ── Sort utilities ──────────────────────────────────────────────
@@ -133,6 +136,7 @@ const getValueColor = (key: string, val: number) => {
 const RawData = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [dateFilter, setDateFilter] = useState("all");
   const [sourceFilter, setSourceFilter] = useState("all");
@@ -142,43 +146,50 @@ const RawData = () => {
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [sort, setSort] = useState<SortConfig>({ key: "", direction: null });
 
+  // Edit/Delete state
+  const [editRow, setEditRow] = useState<Record<string, any> | null>(null);
+  const [editValues, setEditValues] = useState<Record<string, any>>({});
+  const [editOpen, setEditOpen] = useState(false);
+  const [deleteRowId, setDeleteRowId] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+
   const { data: snapshots, isLoading } = useQuery({
     queryKey: ["raw-snapshots", user?.id],
     enabled: !!user,
     queryFn: async () => {
-      // Paginate snapshots (default limit is 1000)
+      const PAGE_SIZE = 1000;
+      // Paginate snapshots
       let allSnaps: any[] = [];
       let snapFrom = 0;
-      const pageSize = 1000;
       while (true) {
         const { data: batch, error: sErr } = await supabase
           .from("company_snapshots")
           .select("id, company_id, snapshot_date, source, data, created_at")
           .eq("user_id", user!.id)
           .order("snapshot_date", { ascending: false })
-          .range(snapFrom, snapFrom + pageSize - 1);
+          .range(snapFrom, snapFrom + PAGE_SIZE - 1);
         if (sErr) throw sErr;
         if (!batch || batch.length === 0) break;
         allSnaps = allSnaps.concat(batch);
-        if (batch.length < pageSize) break;
-        snapFrom += pageSize;
+        if (batch.length < PAGE_SIZE) break;
+        snapFrom += PAGE_SIZE;
       }
 
-      // Fetch ALL companies (default limit is 1000, so paginate)
+      // Fetch ALL companies
       let allCompanies: { id: string; name: string; industry: string | null }[] = [];
       let from = 0;
-      const pageSize = 1000;
       while (true) {
         const { data: batch, error: cErr } = await supabase
           .from("companies")
           .select("id, name, industry")
           .eq("user_id", user!.id)
-          .range(from, from + pageSize - 1);
+          .range(from, from + PAGE_SIZE - 1);
         if (cErr) throw cErr;
         if (!batch || batch.length === 0) break;
         allCompanies = allCompanies.concat(batch);
-        if (batch.length < pageSize) break;
-        from += pageSize;
+        if (batch.length < PAGE_SIZE) break;
+        from += PAGE_SIZE;
       }
 
       const companyMap = new Map<string, { id: string; name: string; industry: string | null }>(allCompanies.map((c) => [c.id, c]));
@@ -196,6 +207,79 @@ const RawData = () => {
       });
     },
   });
+
+  // --- Edit handler ---
+  const openEdit = (row: Record<string, any>) => {
+    setEditRow(row);
+    const vals: Record<string, any> = {};
+    fields.forEach((f) => {
+      if (row[f.key] !== undefined && row[f.key] !== null && row[f.key] !== "—") {
+        vals[f.key] = row[f.key];
+      } else {
+        vals[f.key] = "";
+      }
+    });
+    setEditValues(vals);
+    setEditOpen(true);
+  };
+
+  const saveEdit = async () => {
+    if (!editRow || !user) return;
+    setIsSaving(true);
+    try {
+      // Build the data JSONB from editValues
+      const newData: Record<string, any> = {};
+      fields.forEach((f) => {
+        const val = editValues[f.key];
+        if (val === "" || val === undefined || val === null) return;
+        if (f.type === "number") {
+          const num = Number(val);
+          if (!isNaN(num)) newData[f.key] = num;
+        } else {
+          newData[f.key] = val;
+        }
+      });
+
+      const { error } = await supabase
+        .from("company_snapshots")
+        .update({ data: newData })
+        .eq("id", editRow.id)
+        .eq("user_id", user.id);
+
+      if (error) throw error;
+      queryClient.invalidateQueries({ queryKey: ["raw-snapshots"] });
+      queryClient.invalidateQueries({ queryKey: ["companies"] });
+      toast.success("Snapshot updated");
+      setEditOpen(false);
+    } catch (e: any) {
+      toast.error(e.message || "Failed to update");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // --- Delete handler ---
+  const confirmDelete = async () => {
+    if (!deleteRowId || !user) return;
+    setIsDeleting(true);
+    try {
+      const { error } = await supabase
+        .from("company_snapshots")
+        .delete()
+        .eq("id", deleteRowId)
+        .eq("user_id", user.id);
+
+      if (error) throw error;
+      queryClient.invalidateQueries({ queryKey: ["raw-snapshots"] });
+      queryClient.invalidateQueries({ queryKey: ["companies"] });
+      toast.success("Snapshot deleted");
+    } catch (e: any) {
+      toast.error(e.message || "Failed to delete");
+    } finally {
+      setIsDeleting(false);
+      setDeleteRowId(null);
+    }
+  };
 
   const rows = snapshots || [];
   const allDates = useMemo(() => [...new Set(rows.map((r) => r.date))].sort().reverse(), [rows]);
@@ -504,18 +588,19 @@ const RawData = () => {
                       </button>
                     </TableHead>
                   ))}
+                  <TableHead className="w-20 text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {isLoading ? (
                   <TableRow>
-                    <TableCell colSpan={4 + enabledFields.length} className="text-center py-12">
+                    <TableCell colSpan={5 + enabledFields.length} className="text-center py-12">
                       <Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" />
                     </TableCell>
                   </TableRow>
                 ) : filtered.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={4 + enabledFields.length} className="text-center text-muted-foreground py-12">
+                    <TableCell colSpan={5 + enabledFields.length} className="text-center text-muted-foreground py-12">
                       {rows.length === 0
                         ? "No import data yet. Add companies manually, upload a CSV, or connect an integration."
                         : "No records found matching your filters."}
@@ -546,6 +631,16 @@ const RawData = () => {
                           </TableCell>
                         );
                       })}
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end gap-1">
+                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(row)}>
+                            <Pencil className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" onClick={() => setDeleteRowId(row.id)}>
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      </TableCell>
                     </TableRow>
                   ))
                 )}
@@ -553,6 +648,56 @@ const RawData = () => {
             </Table>
           </div>
         </div>
+
+        {/* Edit Snapshot Dialog */}
+        <Dialog open={editOpen} onOpenChange={setEditOpen}>
+          <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Edit Snapshot</DialogTitle>
+              <DialogDescription>
+                {editRow?.company} — {editRow?.date}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-3 py-2">
+              {fields.map((f) => (
+                <div key={f.key} className="space-y-1">
+                  <Label className="text-xs">{f.label}</Label>
+                  <Input
+                    type={f.type === "number" ? "number" : "text"}
+                    value={editValues[f.key] ?? ""}
+                    onChange={(e) => setEditValues((prev) => ({ ...prev, [f.key]: e.target.value }))}
+                    placeholder={`Enter ${f.label.toLowerCase()}`}
+                  />
+                </div>
+              ))}
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setEditOpen(false)}>Cancel</Button>
+              <Button onClick={saveEdit} disabled={isSaving}>
+                {isSaving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                Save
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Delete Confirmation */}
+        <AlertDialog open={!!deleteRowId} onOpenChange={(open) => !open && setDeleteRowId(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete snapshot?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This will permanently remove this data point. This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={confirmDelete} disabled={isDeleting} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                {isDeleting ? "Deleting…" : "Delete"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </div>
   );
