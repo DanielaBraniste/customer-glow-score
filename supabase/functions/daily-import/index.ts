@@ -797,19 +797,24 @@ Deno.serve(async (req) => {
         console.log(`[daily-import] Scheduling next chunk (total so far: ${totalRecords})`);
         // Self-invoke for next chunk
         const anonKey = Deno.env.get("SUPABASE_ANON_KEY") || Deno.env.get("SUPABASE_PUBLISHABLE_KEY") || "";
-        fetch(`${supabaseUrl}/functions/v1/daily-import`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${anonKey}`,
-          },
-          body: JSON.stringify({
-            connector_id: filterConnectorId,
-            user_id: filterUserId,
-            resume_log_id: resumeLogId,
-            resume_cursor: result.nextCursor,
-          }),
-        }).catch((err) => console.error("[daily-import] Self-invoke failed:", err));
+        try {
+          const selfRes = await fetch(`${supabaseUrl}/functions/v1/daily-import`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${anonKey}`,
+            },
+            body: JSON.stringify({
+              connector_id: filterConnectorId,
+              user_id: filterUserId,
+              resume_log_id: resumeLogId,
+              resume_cursor: result.nextCursor,
+            }),
+          });
+          console.log(`[daily-import] Self-invoke response: ${selfRes.status}`);
+        } catch (err) {
+          console.error("[daily-import] Self-invoke failed:", err);
+        }
 
         return new Response(JSON.stringify({ success: true, status: "chunked", totalSoFar: totalRecords, hasMore: true }), {
           status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
