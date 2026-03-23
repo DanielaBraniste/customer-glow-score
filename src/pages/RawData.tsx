@@ -589,17 +589,18 @@ const RawData = () => {
                     </TableHead>
                   ))}
                   <TableHead className="w-20 text-right">Actions</TableHead>
+                </TableRow>
               </TableHeader>
               <TableBody>
                 {isLoading ? (
                   <TableRow>
-                    <TableCell colSpan={4 + enabledFields.length} className="text-center py-12">
+                    <TableCell colSpan={5 + enabledFields.length} className="text-center py-12">
                       <Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" />
                     </TableCell>
                   </TableRow>
                 ) : filtered.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={4 + enabledFields.length} className="text-center text-muted-foreground py-12">
+                    <TableCell colSpan={5 + enabledFields.length} className="text-center text-muted-foreground py-12">
                       {rows.length === 0
                         ? "No import data yet. Add companies manually, upload a CSV, or connect an integration."
                         : "No records found matching your filters."}
@@ -630,6 +631,16 @@ const RawData = () => {
                           </TableCell>
                         );
                       })}
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end gap-1">
+                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(row)}>
+                            <Pencil className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" onClick={() => setDeleteRowId(row.id)}>
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      </TableCell>
                     </TableRow>
                   ))
                 )}
@@ -637,6 +648,56 @@ const RawData = () => {
             </Table>
           </div>
         </div>
+
+        {/* Edit Snapshot Dialog */}
+        <Dialog open={editOpen} onOpenChange={setEditOpen}>
+          <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Edit Snapshot</DialogTitle>
+              <DialogDescription>
+                {editRow?.company} — {editRow?.date}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-3 py-2">
+              {fields.map((f) => (
+                <div key={f.key} className="space-y-1">
+                  <Label className="text-xs">{f.label}</Label>
+                  <Input
+                    type={f.type === "number" ? "number" : "text"}
+                    value={editValues[f.key] ?? ""}
+                    onChange={(e) => setEditValues((prev) => ({ ...prev, [f.key]: e.target.value }))}
+                    placeholder={`Enter ${f.label.toLowerCase()}`}
+                  />
+                </div>
+              ))}
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setEditOpen(false)}>Cancel</Button>
+              <Button onClick={saveEdit} disabled={isSaving}>
+                {isSaving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                Save
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Delete Confirmation */}
+        <AlertDialog open={!!deleteRowId} onOpenChange={(open) => !open && setDeleteRowId(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete snapshot?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This will permanently remove this data point. This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={confirmDelete} disabled={isDeleting} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                {isDeleting ? "Deleting…" : "Delete"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </div>
   );
