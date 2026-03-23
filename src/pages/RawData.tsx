@@ -136,6 +136,7 @@ const getValueColor = (key: string, val: number) => {
 const RawData = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [dateFilter, setDateFilter] = useState("all");
   const [sourceFilter, setSourceFilter] = useState("all");
@@ -145,43 +146,50 @@ const RawData = () => {
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [sort, setSort] = useState<SortConfig>({ key: "", direction: null });
 
+  // Edit/Delete state
+  const [editRow, setEditRow] = useState<Record<string, any> | null>(null);
+  const [editValues, setEditValues] = useState<Record<string, any>>({});
+  const [editOpen, setEditOpen] = useState(false);
+  const [deleteRowId, setDeleteRowId] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+
   const { data: snapshots, isLoading } = useQuery({
     queryKey: ["raw-snapshots", user?.id],
     enabled: !!user,
     queryFn: async () => {
-      // Paginate snapshots (default limit is 1000)
+      const PAGE_SIZE = 1000;
+      // Paginate snapshots
       let allSnaps: any[] = [];
       let snapFrom = 0;
-      const pageSize = 1000;
       while (true) {
         const { data: batch, error: sErr } = await supabase
           .from("company_snapshots")
           .select("id, company_id, snapshot_date, source, data, created_at")
           .eq("user_id", user!.id)
           .order("snapshot_date", { ascending: false })
-          .range(snapFrom, snapFrom + pageSize - 1);
+          .range(snapFrom, snapFrom + PAGE_SIZE - 1);
         if (sErr) throw sErr;
         if (!batch || batch.length === 0) break;
         allSnaps = allSnaps.concat(batch);
-        if (batch.length < pageSize) break;
-        snapFrom += pageSize;
+        if (batch.length < PAGE_SIZE) break;
+        snapFrom += PAGE_SIZE;
       }
 
-      // Fetch ALL companies (default limit is 1000, so paginate)
+      // Fetch ALL companies
       let allCompanies: { id: string; name: string; industry: string | null }[] = [];
       let from = 0;
-      const pageSize = 1000;
       while (true) {
         const { data: batch, error: cErr } = await supabase
           .from("companies")
           .select("id, name, industry")
           .eq("user_id", user!.id)
-          .range(from, from + pageSize - 1);
+          .range(from, from + PAGE_SIZE - 1);
         if (cErr) throw cErr;
         if (!batch || batch.length === 0) break;
         allCompanies = allCompanies.concat(batch);
-        if (batch.length < pageSize) break;
-        from += pageSize;
+        if (batch.length < PAGE_SIZE) break;
+        from += PAGE_SIZE;
       }
 
       const companyMap = new Map<string, { id: string; name: string; industry: string | null }>(allCompanies.map((c) => [c.id, c]));
@@ -199,6 +207,79 @@ const RawData = () => {
       });
     },
   });
+
+  // --- Edit handler ---
+  const openEdit = (row: Record<string, any>) => {
+    setEditRow(row);
+    const vals: Record<string, any> = {};
+    fields.forEach((f) => {
+      if (row[f.key] !== undefined && row[f.key] !== null && row[f.key] !== "—") {
+        vals[f.key] = row[f.key];
+      } else {
+        vals[f.key] = "";
+      }
+    });
+    setEditValues(vals);
+    setEditOpen(true);
+  };
+
+  const saveEdit = async () => {
+    if (!editRow || !user) return;
+    setIsSaving(true);
+    try {
+      // Build the data JSONB from editValues
+      const newData: Record<string, any> = {};
+      fields.forEach((f) => {
+        const val = editValues[f.key];
+        if (val === "" || val === undefined || val === null) return;
+        if (f.type === "number") {
+          const num = Number(val);
+          if (!isNaN(num)) newData[f.key] = num;
+        } else {
+          newData[f.key] = val;
+        }
+      });
+
+      const { error } = await supabase
+        .from("company_snapshots")
+        .update({ data: newData })
+        .eq("id", editRow.id)
+        .eq("user_id", user.id);
+
+      if (error) throw error;
+      queryClient.invalidateQueries({ queryKey: ["raw-snapshots"] });
+      queryClient.invalidateQueries({ queryKey: ["companies"] });
+      toast.success("Snapshot updated");
+      setEditOpen(false);
+    } catch (e: any) {
+      toast.error(e.message || "Failed to update");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // --- Delete handler ---
+  const confirmDelete = async () => {
+    if (!deleteRowId || !user) return;
+    setIsDeleting(true);
+    try {
+      const { error } = await supabase
+        .from("company_snapshots")
+        .delete()
+        .eq("id", deleteRowId)
+        .eq("user_id", user.id);
+
+      if (error) throw error;
+      queryClient.invalidateQueries({ queryKey: ["raw-snapshots"] });
+      queryClient.invalidateQueries({ queryKey: ["companies"] });
+      toast.success("Snapshot deleted");
+    } catch (e: any) {
+      toast.error(e.message || "Failed to delete");
+    } finally {
+      setIsDeleting(false);
+      setDeleteRowId(null);
+    }
+  };
 
   const rows = snapshots || [];
   const allDates = useMemo(() => [...new Set(rows.map((r) => r.date))].sort().reverse(), [rows]);
