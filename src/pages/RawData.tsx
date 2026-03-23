@@ -146,13 +146,23 @@ const RawData = () => {
     queryKey: ["raw-snapshots", user?.id],
     enabled: !!user,
     queryFn: async () => {
-      const { data: snaps, error: sErr } = await supabase
-        .from("company_snapshots")
-        .select("id, company_id, snapshot_date, source, data, created_at")
-        .eq("user_id", user!.id)
-        .order("snapshot_date", { ascending: false });
-
-      if (sErr) throw sErr;
+      // Paginate snapshots (default limit is 1000)
+      let allSnaps: any[] = [];
+      let snapFrom = 0;
+      const pageSize = 1000;
+      while (true) {
+        const { data: batch, error: sErr } = await supabase
+          .from("company_snapshots")
+          .select("id, company_id, snapshot_date, source, data, created_at")
+          .eq("user_id", user!.id)
+          .order("snapshot_date", { ascending: false })
+          .range(snapFrom, snapFrom + pageSize - 1);
+        if (sErr) throw sErr;
+        if (!batch || batch.length === 0) break;
+        allSnaps = allSnaps.concat(batch);
+        if (batch.length < pageSize) break;
+        snapFrom += pageSize;
+      }
 
       // Fetch ALL companies (default limit is 1000, so paginate)
       let allCompanies: { id: string; name: string; industry: string | null }[] = [];
