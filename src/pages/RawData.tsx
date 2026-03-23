@@ -171,9 +171,7 @@ const RawData = () => {
         from += pageSize;
       }
 
-      if (cErr) throw cErr;
-
-      const companyMap = new Map<string, { id: string; name: string; industry: string | null }>(companies?.map((c) => [c.id, c]) || []);
+      const companyMap = new Map<string, { id: string; name: string; industry: string | null }>(allCompanies.map((c) => [c.id, c]));
 
       return (snaps || []).map((s) => {
         const company = companyMap.get(s.company_id);
