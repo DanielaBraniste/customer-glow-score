@@ -1,0 +1,1 @@
+UPDATE import_logs SET status = 'failed', error_message = 'Marked stale: self-invocation chain broke before completion', completed_at = now() WHERE status = 'running' AND started_at < now() - interval '1 hour';
