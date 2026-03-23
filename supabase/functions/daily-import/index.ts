@@ -870,19 +870,24 @@ Deno.serve(async (req) => {
           }).eq("id", log.id);
 
           const anonKey = Deno.env.get("SUPABASE_ANON_KEY") || Deno.env.get("SUPABASE_PUBLISHABLE_KEY") || "";
-          fetch(`${supabaseUrl}/functions/v1/daily-import`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "Authorization": `Bearer ${anonKey}`,
-            },
-            body: JSON.stringify({
-              connector_id: connector.connector_id,
-              user_id: connector.user_id,
-              resume_log_id: log.id,
-              resume_cursor: result.nextCursor,
-            }),
-          }).catch((err) => console.error("[daily-import] Self-invoke failed:", err));
+          try {
+            const selfRes = await fetch(`${supabaseUrl}/functions/v1/daily-import`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${anonKey}`,
+              },
+              body: JSON.stringify({
+                connector_id: connector.connector_id,
+                user_id: connector.user_id,
+                resume_log_id: log.id,
+                resume_cursor: result.nextCursor,
+              }),
+            });
+            console.log(`[daily-import] Self-invoke response: ${selfRes.status}`);
+          } catch (err) {
+            console.error("[daily-import] Self-invoke failed:", err);
+          }
 
           results.push({ connector: connector.connector_id, user: connector.user_id, status: "chunked", records: result.records, hasMore: true });
         } else {
