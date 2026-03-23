@@ -154,10 +154,22 @@ const RawData = () => {
 
       if (sErr) throw sErr;
 
-      const { data: companies, error: cErr } = await supabase
-        .from("companies")
-        .select("id, name, industry")
-        .eq("user_id", user!.id);
+      // Fetch ALL companies (default limit is 1000, so paginate)
+      let allCompanies: { id: string; name: string; industry: string | null }[] = [];
+      let from = 0;
+      const pageSize = 1000;
+      while (true) {
+        const { data: batch, error: cErr } = await supabase
+          .from("companies")
+          .select("id, name, industry")
+          .eq("user_id", user!.id)
+          .range(from, from + pageSize - 1);
+        if (cErr) throw cErr;
+        if (!batch || batch.length === 0) break;
+        allCompanies = allCompanies.concat(batch);
+        if (batch.length < pageSize) break;
+        from += pageSize;
+      }
 
       if (cErr) throw cErr;
 
