@@ -588,7 +588,7 @@ const RawData = () => {
                       </button>
                     </TableHead>
                   ))}
-                </TableRow>
+                  <TableHead className="w-20 text-right">Actions</TableHead>
               </TableHeader>
               <TableBody>
                 {isLoading ? (
