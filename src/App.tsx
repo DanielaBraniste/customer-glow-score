@@ -49,7 +49,7 @@ const App = () => (
         </BrowserRouter>
       </TooltipProvider>
     </QueryClientProvider>
-  </ThemeProvider>
+  </TimeBasedThemeProvider>
 );
 
 export default App;
