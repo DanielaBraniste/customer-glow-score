@@ -1,3 +1,5 @@
+import { Link } from "react-router-dom";
+
 const Footer = () => (
   <footer className="border-t border-border py-12 px-6">
     <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
@@ -8,9 +10,9 @@ const Footer = () => (
         <span className="font-semibold">Rescuro</span>
       </div>
       <div className="flex gap-6 text-sm text-muted-foreground">
-        <a href="#" className="hover:text-foreground transition-colors">Privacy</a>
-        <a href="#" className="hover:text-foreground transition-colors">Terms</a>
-        <a href="#" className="hover:text-foreground transition-colors">Contact</a>
+        <Link to="/privacy" className="hover:text-foreground transition-colors">Privacy</Link>
+        <Link to="/terms" className="hover:text-foreground transition-colors">Terms</Link>
+        <a href="mailto:contact@rescuro.com" className="hover:text-foreground transition-colors">Contact</a>
       </div>
       <p className="text-sm text-muted-foreground">© 2026 Rescuro. All rights reserved.</p>
     </div>
