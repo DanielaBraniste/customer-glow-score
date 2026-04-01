@@ -45,6 +45,8 @@ const App = () => (
               <Route path="/raw-data" element={<ProtectedRoute><RawData /></ProtectedRoute>} />
               <Route path="/health-progression" element={<ProtectedRoute><HealthProgression /></ProtectedRoute>} />
               <Route path="/admin-9x7k" element={<AdminPanel />} />
+              <Route path="/privacy" element={<PrivacyPolicy />} />
+              <Route path="/terms" element={<TermsOfService />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </AuthProvider>
