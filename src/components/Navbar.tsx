@@ -26,7 +26,7 @@ const Navbar = () => {
         <div className="hidden md:flex items-center gap-8 text-sm text-muted-foreground">
           <a href="#features" className="hover:text-foreground transition-colors">Features</a>
           <a href="#how" className="hover:text-foreground transition-colors">How it Works</a>
-          <a href="#pricing" className="hover:text-foreground transition-colors">Pricing</a>
+          {/* <a href="#pricing" className="hover:text-foreground transition-colors">Pricing</a> */}
         </div>
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="icon" onClick={() => { const next = theme === "dark" ? "light" : "dark"; setTheme(next); sessionStorage.setItem("manual-theme", "true"); }} className="text-muted-foreground hover:text-foreground">
