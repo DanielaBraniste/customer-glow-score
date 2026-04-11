@@ -83,4 +83,12 @@ export const connectorFields: Record<string, ConnectorField[]> = {
     { key: "lastLogin", label: "Last Activity", description: "Most recent message timestamp", default: true },
     { key: "usageScore", label: "Usage Score", description: "Derived from message activity", default: true },
   ],
+  n8n: [
+    { key: "mrr", label: "MRR", description: "Monthly recurring revenue from workflow data", default: true },
+    { key: "nps", label: "NPS", description: "NPS score from workflow data", default: true },
+    { key: "lastLogin", label: "Last Activity", description: "Last activity timestamp from workflow", default: true },
+    { key: "supportTickets", label: "Support Tickets", description: "Ticket count from workflow data", default: true },
+    { key: "contractEnd", label: "Contract End", description: "Contract end date from workflow", default: true },
+    { key: "usageScore", label: "Usage Score", description: "Usage score from workflow data", default: true },
+  ],
 };
