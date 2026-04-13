@@ -21,6 +21,7 @@ import Blog from "./pages/Blog";
 import WhatIsCustomerHealthScore from "./pages/blog/WhatIsCustomerHealthScore";
 import CustomerHealthScoreVsNps from "./pages/blog/CustomerHealthScoreVsNps";
 import CustomerSuccessKpis from "./pages/blog/CustomerSuccessKpis";
+import Contact from "./pages/Contact";
 
 const queryClient = new QueryClient();
 
