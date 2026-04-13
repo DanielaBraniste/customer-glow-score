@@ -1,0 +1,49 @@
+import { Link } from "react-router-dom";
+import Navbar from "@/components/Navbar";
+import Footer from "@/components/Footer";
+
+const articles = [
+  {
+    slug: "what-is-customer-health-score",
+    title: "What Is a Customer Health Score? A Complete Guide for SaaS Teams",
+    excerpt:
+      "Your CRM says the account is "active." Your CSM says the relationship is "strong." Then the customer churns — and everyone acts surprised. A customer health score fixes this by making the invisible visible.",
+    date: "April 13, 2026",
+    readTime: "12 min read",
+  },
+];
+
+const Blog = () => (
+  <div className="min-h-screen bg-background text-foreground">
+    <Navbar />
+    <main className="pt-28 pb-20 px-6">
+      <div className="max-w-3xl mx-auto">
+        <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-4">Blog</h1>
+        <p className="text-lg text-muted-foreground mb-12">
+          Insights on customer success, health scoring, and SaaS retention.
+        </p>
+
+        <div className="space-y-10">
+          {articles.map((a) => (
+            <Link
+              key={a.slug}
+              to={`/blog/${a.slug}`}
+              className="block group rounded-xl border border-border p-6 hover:border-primary/40 transition-colors"
+            >
+              <p className="text-sm text-muted-foreground mb-2">
+                {a.date} · {a.readTime}
+              </p>
+              <h2 className="text-xl font-semibold group-hover:text-primary transition-colors mb-2">
+                {a.title}
+              </h2>
+              <p className="text-muted-foreground leading-relaxed">{a.excerpt}</p>
+            </Link>
+          ))}
+        </div>
+      </div>
+    </main>
+    <Footer />
+  </div>
+);
+
+export default Blog;
