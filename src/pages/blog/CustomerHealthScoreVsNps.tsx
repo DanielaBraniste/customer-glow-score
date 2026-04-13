@@ -7,7 +7,7 @@ const CustomerHealthScoreVsNps = () => (
   <div className="min-h-screen bg-background text-foreground">
     <Navbar />
     <main className="pt-28 pb-20 px-6">
-      <article className="max-w-3xl mx-auto prose prose-neutral dark:prose-invert prose-headings:font-semibold prose-a:text-primary">
+      <article className="max-w-3xl mx-auto prose prose-neutral dark:prose-invert blog-article prose-a:text-primary">
         <Link
           to="/blog"
           className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground no-underline mb-8"
