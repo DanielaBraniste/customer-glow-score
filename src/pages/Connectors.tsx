@@ -17,7 +17,6 @@ import slackLogo from "@/assets/connectors/slack.png";
 import zendeskLogo from "@/assets/connectors/zendesk.png";
 import pipedriveLogo from "@/assets/connectors/pipedrive.png";
 import stripeLogo from "@/assets/connectors/stripe.png";
-import n8nLogo from "@/assets/connectors/n8n.png";
 import segmentLogo from "@/assets/connectors/segment.png";
 import FieldSelector from "@/components/connectors/FieldSelector";
 import { connectorFields } from "@/components/connectors/connectorFields";
@@ -102,16 +101,6 @@ const connectorDefs = [
     keyLabel: "Write Key",
     instructions: "Go to your Segment workspace → Sources → select your source → Settings → API Keys. Paste the value as: spaceId|accessToken",
     scopes: ["Profiles (read)", "Traits (read)", "Events (read)"],
-  },
-  {
-    id: "n8n",
-    name: "n8n",
-    logo: n8nLogo,
-    description: "Build custom workflows to import data from any source",
-    category: "Automation",
-    keyLabel: "API Key",
-    instructions: "Go to your n8n instance → Settings → API → Create an API key. Use n8n workflows with webhooks to push customer data into Rescuro.",
-    scopes: ["Workflow execution", "Webhook access"],
   },
 ];
 
