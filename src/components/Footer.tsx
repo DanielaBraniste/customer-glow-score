@@ -12,7 +12,7 @@ const Footer = () => (
       <div className="flex gap-6 text-sm text-muted-foreground">
         <Link to="/privacy" className="hover:text-foreground transition-colors">Privacy</Link>
         <Link to="/terms" className="hover:text-foreground transition-colors">Terms</Link>
-        <a href="mailto:contact@rescuro.com" className="hover:text-foreground transition-colors">Contact</a>
+        <Link to="/contact" className="hover:text-foreground transition-colors">Contact</Link>
       </div>
       <p className="text-sm text-muted-foreground">© 2026 Rescuro. All rights reserved.</p>
     </div>
