@@ -56,6 +56,7 @@ const App = () => (
               <Route path="/blog/what-is-customer-health-score" element={<WhatIsCustomerHealthScore />} />
               <Route path="/blog/customer-health-score-vs-nps" element={<CustomerHealthScoreVsNps />} />
               <Route path="/blog/customer-success-kpis-saas-2026" element={<CustomerSuccessKpis />} />
+              <Route path="/contact" element={<Contact />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </AuthProvider>
