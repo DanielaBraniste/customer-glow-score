@@ -4,6 +4,14 @@ import Footer from "@/components/Footer";
 
 const articles = [
   {
+    slug: "customer-success-kpis-saas-2026",
+    title: "Customer Success KPIs Every SaaS Company Should Track in 2026",
+    excerpt:
+      "The era of 'growth at all costs' is over. In 2026, the SaaS companies that win are the ones obsessing over the customers they already have — not just the ones they're chasing. Here are the KPIs that separate thriving CS teams from the rest.",
+    date: "April 13, 2026",
+    readTime: "16 min read",
+  },
+  {
     slug: "customer-health-score-vs-nps",
     title: "Customer Health Score vs. NPS: What's the Difference and When to Use Each",
     excerpt:
