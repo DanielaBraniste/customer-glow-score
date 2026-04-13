@@ -7,7 +7,7 @@ const articles = [
     slug: "what-is-customer-health-score",
     title: "What Is a Customer Health Score? A Complete Guide for SaaS Teams",
     excerpt:
-      "Your CRM says the account is "active." Your CSM says the relationship is "strong." Then the customer churns — and everyone acts surprised. A customer health score fixes this by making the invisible visible.",
+      "Your CRM says the account is 'active.' Your CSM says the relationship is 'strong.' Then the customer churns — and everyone acts surprised. A customer health score fixes this by making the invisible visible.",
     date: "April 13, 2026",
     readTime: "12 min read",
   },

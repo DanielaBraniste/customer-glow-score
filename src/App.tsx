@@ -17,6 +17,8 @@ import AdminPanel from "./pages/AdminPanel";
 import HealthProgression from "./pages/HealthProgression";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import TermsOfService from "./pages/TermsOfService";
+import Blog from "./pages/Blog";
+import WhatIsCustomerHealthScore from "./pages/blog/WhatIsCustomerHealthScore";
 
 const queryClient = new QueryClient();
 
@@ -47,6 +49,8 @@ const App = () => (
               <Route path="/admin-9x7k" element={<AdminPanel />} />
               <Route path="/privacy" element={<PrivacyPolicy />} />
               <Route path="/terms" element={<TermsOfService />} />
+              <Route path="/blog" element={<Blog />} />
+              <Route path="/blog/what-is-customer-health-score" element={<WhatIsCustomerHealthScore />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </AuthProvider>
