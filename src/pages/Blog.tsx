@@ -4,6 +4,14 @@ import Footer from "@/components/Footer";
 
 const articles = [
   {
+    slug: "customer-health-score-vs-nps",
+    title: "Customer Health Score vs. NPS: What's the Difference and When to Use Each",
+    excerpt:
+      "A customer gives you a 9 on their NPS survey — then churns two months later. Sound familiar? Here's why NPS alone can't protect your revenue, and how pairing it with a customer health score gives your CS team the full picture.",
+    date: "April 13, 2026",
+    readTime: "14 min read",
+  },
+  {
     slug: "what-is-customer-health-score",
     title: "What Is a Customer Health Score? A Complete Guide for SaaS Teams",
     excerpt:

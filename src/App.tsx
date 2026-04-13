@@ -19,6 +19,7 @@ import PrivacyPolicy from "./pages/PrivacyPolicy";
 import TermsOfService from "./pages/TermsOfService";
 import Blog from "./pages/Blog";
 import WhatIsCustomerHealthScore from "./pages/blog/WhatIsCustomerHealthScore";
+import CustomerHealthScoreVsNps from "./pages/blog/CustomerHealthScoreVsNps";
 
 const queryClient = new QueryClient();
 
@@ -51,6 +52,7 @@ const App = () => (
               <Route path="/terms" element={<TermsOfService />} />
               <Route path="/blog" element={<Blog />} />
               <Route path="/blog/what-is-customer-health-score" element={<WhatIsCustomerHealthScore />} />
+              <Route path="/blog/customer-health-score-vs-nps" element={<CustomerHealthScoreVsNps />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </AuthProvider>
