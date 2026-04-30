@@ -145,12 +145,14 @@ const Connectors = () => {
   const activeConnectorCount = userConnectors.filter((c) => c.is_active).length;
   const atConnectorLimit = activeConnectorCount >= FREE_PLAN_LIMITS.maxActiveConnectors;
 
+  const [upgradeOpen, setUpgradeOpen] = useState(false);
+
   const handleConnect = (connector: typeof connectorDefs[0]) => {
     const existing = getConnectorStatus(connector.id);
     // Block connecting a brand-new connector when at the free-plan limit.
     // Reconnecting / editing an already-existing one is still allowed.
     if (!existing && atConnectorLimit) {
-      toast.error(`Free plan allows only ${FREE_PLAN_LIMITS.maxActiveConnectors} active connector. Disconnect the current one first.`);
+      setUpgradeOpen(true);
       return;
     }
     setConnectDialog(connector);
