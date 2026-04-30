@@ -462,6 +462,14 @@ const Connectors = () => {
           </div>
         </DialogContent>
       </Dialog>
+
+      <UpgradeDialog
+        open={upgradeOpen}
+        onOpenChange={setUpgradeOpen}
+        reason="connector_limit"
+        currentCount={activeConnectorCount}
+        planLimit={FREE_PLAN_LIMITS.maxActiveConnectors}
+      />
     </div>
   );
 };
