@@ -487,7 +487,15 @@ const AddCompanyDialog = ({ open, onOpenChange }: AddCompanyDialogProps) => {
             </div>
             <div className="flex justify-end gap-3 mt-4">
               <Button variant="heroOutline" size="sm" onClick={() => handleOpenChange(false)}>Cancel</Button>
-              <Button variant="hero" size="sm" onClick={handleProceedToMapping} disabled={!selectedFile || atCompanyLimit}>
+              <Button
+                variant="hero"
+                size="sm"
+                onClick={() => {
+                  if (atCompanyLimit) { openUpgrade("company_limit_csv"); return; }
+                  handleProceedToMapping();
+                }}
+                disabled={!selectedFile}
+              >
                 Next: Map Fields
               </Button>
             </div>
