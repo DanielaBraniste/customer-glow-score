@@ -20,6 +20,7 @@ import stripeLogo from "@/assets/connectors/stripe.png";
 import segmentLogo from "@/assets/connectors/segment.png";
 import FieldSelector from "@/components/connectors/FieldSelector";
 import { connectorFields } from "@/components/connectors/connectorFields";
+import { FREE_PLAN_LIMITS } from "@/lib/planLimits";
 
 const connectorDefs = [
   {
@@ -140,8 +141,17 @@ const Connectors = () => {
   }, [user]);
 
   const getConnectorStatus = (connectorId: string) => userConnectors.find((c) => c.connector_id === connectorId);
+  const activeConnectorCount = userConnectors.filter((c) => c.is_active).length;
+  const atConnectorLimit = activeConnectorCount >= FREE_PLAN_LIMITS.maxActiveConnectors;
 
   const handleConnect = (connector: typeof connectorDefs[0]) => {
+    const existing = getConnectorStatus(connector.id);
+    // Block connecting a brand-new connector when at the free-plan limit.
+    // Reconnecting / editing an already-existing one is still allowed.
+    if (!existing && atConnectorLimit) {
+      toast.error(`Free plan allows only ${FREE_PLAN_LIMITS.maxActiveConnectors} active connector. Disconnect the current one first.`);
+      return;
+    }
     setConnectDialog(connector);
     setApiKeyInput("");
     // Initialize selected fields with defaults for this connector
@@ -269,6 +279,13 @@ const Connectors = () => {
           </p>
         </div>
 
+        <div className={`mb-8 text-sm rounded-lg border px-4 py-3 ${atConnectorLimit ? "border-primary/30 bg-primary/5" : "border-border bg-secondary/40"}`}>
+          <span className="font-medium text-foreground">Free plan:</span>{" "}
+          <span className="text-muted-foreground">
+            {activeConnectorCount} / {FREE_PLAN_LIMITS.maxActiveConnectors} active connector
+            {atConnectorLimit ? " — disconnect to switch to a different tool." : "."}
+          </span>
+        </div>
         {categories.map((category) => (
           <div key={category} className="mb-10">
             <h2 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-4">{category}</h2>
@@ -312,8 +329,16 @@ const Connectors = () => {
                           <X className="h-3.5 w-3.5 mr-1.5" /> Disconnect
                         </Button>
                       ) : (
-                        <Button variant="heroOutline" size="sm" className="w-full" onClick={() => handleConnect(connector)}>
-                          <ExternalLink className="h-3.5 w-3.5 mr-1.5" /> Connect
+                        <Button
+                          variant="heroOutline"
+                          size="sm"
+                          className="w-full"
+                          onClick={() => handleConnect(connector)}
+                          disabled={atConnectorLimit}
+                          title={atConnectorLimit ? "Free plan allows only one active connector" : undefined}
+                        >
+                          <ExternalLink className="h-3.5 w-3.5 mr-1.5" />
+                          {atConnectorLimit ? "Limit reached" : "Connect"}
                         </Button>
                       )}
                     </motion.div>

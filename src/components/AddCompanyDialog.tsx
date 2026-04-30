@@ -6,7 +6,8 @@ import { Label } from "@/components/ui/label";
 import { Upload, Building2, Plus, X, FileSpreadsheet, ArrowLeft, ToggleLeft, ToggleRight } from "lucide-react";
 import { toast } from "sonner";
 import CSVFieldMapper from "./CSVFieldMapper";
-import { useAddCompany, useBulkAddCompanies } from "@/hooks/useCompanies";
+import { useAddCompany, useBulkAddCompanies, useCompanies } from "@/hooks/useCompanies";
+import { FREE_PLAN_LIMITS } from "@/lib/planLimits";
 
 // Fix 3: file size limit
 const MAX_FILE_SIZE_MB = 10;
@@ -63,6 +64,10 @@ const AddCompanyDialog = ({ open, onOpenChange }: AddCompanyDialogProps) => {
 
   const addCompanyMutation = useAddCompany();
   const bulkAddMutation = useBulkAddCompanies();
+  const { data: companies = [] } = useCompanies();
+  const companyCount = companies.length;
+  const remainingSlots = Math.max(0, FREE_PLAN_LIMITS.maxCompanies - companyCount);
+  const atCompanyLimit = companyCount >= FREE_PLAN_LIMITS.maxCompanies;
 
   const redistributeWeights = useCallback((customCount: number, indScored: boolean, mScored: boolean) => {
     const total = 1 + (indScored ? 1 : 0) + (mScored ? 1 : 0) + customCount;
@@ -122,6 +127,10 @@ const AddCompanyDialog = ({ open, onOpenChange }: AddCompanyDialogProps) => {
   const handleManualSubmit = async () => {
     if (!name.trim()) {
       toast.error("Company name is required");
+      return;
+    }
+    if (atCompanyLimit) {
+      toast.error(`Free plan limit reached (${FREE_PLAN_LIMITS.maxCompanies} companies). Remove a company to add a new one.`);
       return;
     }
 
@@ -192,9 +201,20 @@ const AddCompanyDialog = ({ open, onOpenChange }: AddCompanyDialogProps) => {
     email: string;
     snapshotData: Record<string, any>;
   }>) => {
+    if (atCompanyLimit) {
+      toast.error(`Free plan limit reached (${FREE_PLAN_LIMITS.maxCompanies} companies). Remove companies before importing.`);
+      return;
+    }
+    let toImport = rows;
+    if (rows.length > remainingSlots) {
+      toast.warning(
+        `Only ${remainingSlots} of ${rows.length} rows will be imported (Free plan limit: ${FREE_PLAN_LIMITS.maxCompanies}).`
+      );
+      toImport = rows.slice(0, remainingSlots);
+    }
     try {
       await bulkAddMutation.mutateAsync(
-        rows.map((r) => ({ ...r, source: "csv" }))
+        toImport.map((r) => ({ ...r, source: "csv" }))
       );
       handleOpenChange(false);
     } catch (err) {
@@ -205,6 +225,12 @@ const AddCompanyDialog = ({ open, onOpenChange }: AddCompanyDialogProps) => {
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className={`bg-card border-border ${mode === "mapping" ? "sm:max-w-2xl" : "sm:max-w-lg"}`}>
+        {mode !== "mapping" && (
+          <div className={`text-xs rounded-md border px-3 py-2 ${atCompanyLimit ? "border-destructive/40 bg-destructive/10 text-destructive" : "border-border bg-secondary/40 text-muted-foreground"}`}>
+            <span className="font-medium text-foreground">Free plan:</span> {companyCount} / {FREE_PLAN_LIMITS.maxCompanies} companies used
+            {atCompanyLimit && " — limit reached"}
+          </div>
+        )}
         {mode === "choose" && (
           <>
             <DialogHeader>
@@ -375,7 +401,7 @@ const AddCompanyDialog = ({ open, onOpenChange }: AddCompanyDialogProps) => {
                 variant="hero"
                 size="sm"
                 onClick={handleManualSubmit}
-                disabled={addCompanyMutation.isPending}
+                disabled={addCompanyMutation.isPending || atCompanyLimit}
               >
                 {addCompanyMutation.isPending ? "Adding…" : "Add Company"}
               </Button>
@@ -452,7 +478,7 @@ const AddCompanyDialog = ({ open, onOpenChange }: AddCompanyDialogProps) => {
             </div>
             <div className="flex justify-end gap-3 mt-4">
               <Button variant="heroOutline" size="sm" onClick={() => handleOpenChange(false)}>Cancel</Button>
-              <Button variant="hero" size="sm" onClick={handleProceedToMapping} disabled={!selectedFile}>
+              <Button variant="hero" size="sm" onClick={handleProceedToMapping} disabled={!selectedFile || atCompanyLimit}>
                 Next: Map Fields
               </Button>
             </div>
