@@ -20,6 +20,7 @@ import stripeLogo from "@/assets/connectors/stripe.png";
 import segmentLogo from "@/assets/connectors/segment.png";
 import FieldSelector from "@/components/connectors/FieldSelector";
 import { connectorFields } from "@/components/connectors/connectorFields";
+import { FREE_PLAN_LIMITS } from "@/lib/planLimits";
 
 const connectorDefs = [
   {
