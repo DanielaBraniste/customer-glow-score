@@ -70,6 +70,15 @@ const AddCompanyDialog = ({ open, onOpenChange }: AddCompanyDialogProps) => {
   const remainingSlots = Math.max(0, FREE_PLAN_LIMITS.maxCompanies - companyCount);
   const atCompanyLimit = companyCount >= FREE_PLAN_LIMITS.maxCompanies;
 
+  const [upgrade, setUpgrade] = useState<{
+    open: boolean;
+    reason: UpgradeTriggerReason;
+    attemptedCount?: number;
+  }>({ open: false, reason: "company_limit_manual" });
+
+  const openUpgrade = (reason: UpgradeTriggerReason, attemptedCount?: number) =>
+    setUpgrade({ open: true, reason, attemptedCount });
+
   const redistributeWeights = useCallback((customCount: number, indScored: boolean, mScored: boolean) => {
     const total = 1 + (indScored ? 1 : 0) + (mScored ? 1 : 0) + customCount;
     const w = calcDefaultWeight(total);
