@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import CSVFieldMapper from "./CSVFieldMapper";
 import { useAddCompany, useBulkAddCompanies, useCompanies } from "@/hooks/useCompanies";
 import { FREE_PLAN_LIMITS } from "@/lib/planLimits";
+import UpgradeDialog, { UpgradeTriggerReason } from "@/components/UpgradeDialog";
 
 // Fix 3: file size limit
 const MAX_FILE_SIZE_MB = 10;
@@ -68,6 +69,15 @@ const AddCompanyDialog = ({ open, onOpenChange }: AddCompanyDialogProps) => {
   const companyCount = companies.length;
   const remainingSlots = Math.max(0, FREE_PLAN_LIMITS.maxCompanies - companyCount);
   const atCompanyLimit = companyCount >= FREE_PLAN_LIMITS.maxCompanies;
+
+  const [upgrade, setUpgrade] = useState<{
+    open: boolean;
+    reason: UpgradeTriggerReason;
+    attemptedCount?: number;
+  }>({ open: false, reason: "company_limit_manual" });
+
+  const openUpgrade = (reason: UpgradeTriggerReason, attemptedCount?: number) =>
+    setUpgrade({ open: true, reason, attemptedCount });
 
   const redistributeWeights = useCallback((customCount: number, indScored: boolean, mScored: boolean) => {
     const total = 1 + (indScored ? 1 : 0) + (mScored ? 1 : 0) + customCount;
@@ -130,7 +140,7 @@ const AddCompanyDialog = ({ open, onOpenChange }: AddCompanyDialogProps) => {
       return;
     }
     if (atCompanyLimit) {
-      toast.error(`Free plan limit reached (${FREE_PLAN_LIMITS.maxCompanies} companies). Remove a company to add a new one.`);
+      openUpgrade("company_limit_manual", companyCount + 1);
       return;
     }
 
@@ -202,15 +212,14 @@ const AddCompanyDialog = ({ open, onOpenChange }: AddCompanyDialogProps) => {
     snapshotData: Record<string, any>;
   }>) => {
     if (atCompanyLimit) {
-      toast.error(`Free plan limit reached (${FREE_PLAN_LIMITS.maxCompanies} companies). Remove companies before importing.`);
+      openUpgrade("company_limit_csv", companyCount + rows.length);
       return;
     }
     let toImport = rows;
     if (rows.length > remainingSlots) {
-      toast.warning(
-        `Only ${remainingSlots} of ${rows.length} rows will be imported (Free plan limit: ${FREE_PLAN_LIMITS.maxCompanies}).`
-      );
+      openUpgrade("company_limit_csv", companyCount + rows.length);
       toImport = rows.slice(0, remainingSlots);
+      if (toImport.length === 0) return;
     }
     try {
       await bulkAddMutation.mutateAsync(
@@ -401,7 +410,7 @@ const AddCompanyDialog = ({ open, onOpenChange }: AddCompanyDialogProps) => {
                 variant="hero"
                 size="sm"
                 onClick={handleManualSubmit}
-                disabled={addCompanyMutation.isPending || atCompanyLimit}
+                disabled={addCompanyMutation.isPending}
               >
                 {addCompanyMutation.isPending ? "Adding…" : "Add Company"}
               </Button>
@@ -478,7 +487,15 @@ const AddCompanyDialog = ({ open, onOpenChange }: AddCompanyDialogProps) => {
             </div>
             <div className="flex justify-end gap-3 mt-4">
               <Button variant="heroOutline" size="sm" onClick={() => handleOpenChange(false)}>Cancel</Button>
-              <Button variant="hero" size="sm" onClick={handleProceedToMapping} disabled={!selectedFile || atCompanyLimit}>
+              <Button
+                variant="hero"
+                size="sm"
+                onClick={() => {
+                  if (atCompanyLimit) { openUpgrade("company_limit_csv"); return; }
+                  handleProceedToMapping();
+                }}
+                disabled={!selectedFile}
+              >
                 Next: Map Fields
               </Button>
             </div>
@@ -493,6 +510,14 @@ const AddCompanyDialog = ({ open, onOpenChange }: AddCompanyDialogProps) => {
           />
         )}
       </DialogContent>
+      <UpgradeDialog
+        open={upgrade.open}
+        onOpenChange={(o) => setUpgrade((u) => ({ ...u, open: o }))}
+        reason={upgrade.reason}
+        attemptedCount={upgrade.attemptedCount}
+        currentCount={companyCount}
+        planLimit={FREE_PLAN_LIMITS.maxCompanies}
+      />
     </Dialog>
   );
 };

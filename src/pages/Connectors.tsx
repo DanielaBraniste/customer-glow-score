@@ -21,6 +21,7 @@ import segmentLogo from "@/assets/connectors/segment.png";
 import FieldSelector from "@/components/connectors/FieldSelector";
 import { connectorFields } from "@/components/connectors/connectorFields";
 import { FREE_PLAN_LIMITS } from "@/lib/planLimits";
+import UpgradeDialog from "@/components/UpgradeDialog";
 
 const connectorDefs = [
   {
@@ -144,12 +145,14 @@ const Connectors = () => {
   const activeConnectorCount = userConnectors.filter((c) => c.is_active).length;
   const atConnectorLimit = activeConnectorCount >= FREE_PLAN_LIMITS.maxActiveConnectors;
 
+  const [upgradeOpen, setUpgradeOpen] = useState(false);
+
   const handleConnect = (connector: typeof connectorDefs[0]) => {
     const existing = getConnectorStatus(connector.id);
     // Block connecting a brand-new connector when at the free-plan limit.
     // Reconnecting / editing an already-existing one is still allowed.
     if (!existing && atConnectorLimit) {
-      toast.error(`Free plan allows only ${FREE_PLAN_LIMITS.maxActiveConnectors} active connector. Disconnect the current one first.`);
+      setUpgradeOpen(true);
       return;
     }
     setConnectDialog(connector);
@@ -333,12 +336,14 @@ const Connectors = () => {
                           variant="heroOutline"
                           size="sm"
                           className="w-full"
-                          onClick={() => handleConnect(connector)}
-                          disabled={atConnectorLimit}
-                          title={atConnectorLimit ? "Free plan allows only one active connector" : undefined}
+                          onClick={() => {
+                            if (atConnectorLimit) { setUpgradeOpen(true); return; }
+                            handleConnect(connector);
+                          }}
+                          title={atConnectorLimit ? "Free plan allows only one active connector — click to upgrade" : undefined}
                         >
                           <ExternalLink className="h-3.5 w-3.5 mr-1.5" />
-                          {atConnectorLimit ? "Limit reached" : "Connect"}
+                          {atConnectorLimit ? "Upgrade to connect" : "Connect"}
                         </Button>
                       )}
                     </motion.div>
@@ -457,6 +462,14 @@ const Connectors = () => {
           </div>
         </DialogContent>
       </Dialog>
+
+      <UpgradeDialog
+        open={upgradeOpen}
+        onOpenChange={setUpgradeOpen}
+        reason="connector_limit"
+        currentCount={activeConnectorCount}
+        planLimit={FREE_PLAN_LIMITS.maxActiveConnectors}
+      />
     </div>
   );
 };
