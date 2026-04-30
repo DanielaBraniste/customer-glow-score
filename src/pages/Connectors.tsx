@@ -329,8 +329,16 @@ const Connectors = () => {
                           <X className="h-3.5 w-3.5 mr-1.5" /> Disconnect
                         </Button>
                       ) : (
-                        <Button variant="heroOutline" size="sm" className="w-full" onClick={() => handleConnect(connector)}>
-                          <ExternalLink className="h-3.5 w-3.5 mr-1.5" /> Connect
+                        <Button
+                          variant="heroOutline"
+                          size="sm"
+                          className="w-full"
+                          onClick={() => handleConnect(connector)}
+                          disabled={atConnectorLimit}
+                          title={atConnectorLimit ? "Free plan allows only one active connector" : undefined}
+                        >
+                          <ExternalLink className="h-3.5 w-3.5 mr-1.5" />
+                          {atConnectorLimit ? "Limit reached" : "Connect"}
                         </Button>
                       )}
                     </motion.div>
