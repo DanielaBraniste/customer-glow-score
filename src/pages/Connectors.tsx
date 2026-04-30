@@ -336,12 +336,14 @@ const Connectors = () => {
                           variant="heroOutline"
                           size="sm"
                           className="w-full"
-                          onClick={() => handleConnect(connector)}
-                          disabled={atConnectorLimit}
-                          title={atConnectorLimit ? "Free plan allows only one active connector" : undefined}
+                          onClick={() => {
+                            if (atConnectorLimit) { setUpgradeOpen(true); return; }
+                            handleConnect(connector);
+                          }}
+                          title={atConnectorLimit ? "Free plan allows only one active connector — click to upgrade" : undefined}
                         >
                           <ExternalLink className="h-3.5 w-3.5 mr-1.5" />
-                          {atConnectorLimit ? "Limit reached" : "Connect"}
+                          {atConnectorLimit ? "Upgrade to connect" : "Connect"}
                         </Button>
                       )}
                     </motion.div>
