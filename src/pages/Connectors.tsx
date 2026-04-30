@@ -279,6 +279,13 @@ const Connectors = () => {
           </p>
         </div>
 
+        <div className={`mb-8 text-sm rounded-lg border px-4 py-3 ${atConnectorLimit ? "border-primary/30 bg-primary/5" : "border-border bg-secondary/40"}`}>
+          <span className="font-medium text-foreground">Free plan:</span>{" "}
+          <span className="text-muted-foreground">
+            {activeConnectorCount} / {FREE_PLAN_LIMITS.maxActiveConnectors} active connector
+            {atConnectorLimit ? " — disconnect to switch to a different tool." : "."}
+          </span>
+        </div>
         {categories.map((category) => (
           <div key={category} className="mb-10">
             <h2 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-4">{category}</h2>
