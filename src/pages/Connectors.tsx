@@ -141,8 +141,17 @@ const Connectors = () => {
   }, [user]);
 
   const getConnectorStatus = (connectorId: string) => userConnectors.find((c) => c.connector_id === connectorId);
+  const activeConnectorCount = userConnectors.filter((c) => c.is_active).length;
+  const atConnectorLimit = activeConnectorCount >= FREE_PLAN_LIMITS.maxActiveConnectors;
 
   const handleConnect = (connector: typeof connectorDefs[0]) => {
+    const existing = getConnectorStatus(connector.id);
+    // Block connecting a brand-new connector when at the free-plan limit.
+    // Reconnecting / editing an already-existing one is still allowed.
+    if (!existing && atConnectorLimit) {
+      toast.error(`Free plan allows only ${FREE_PLAN_LIMITS.maxActiveConnectors} active connector. Disconnect the current one first.`);
+      return;
+    }
     setConnectDialog(connector);
     setApiKeyInput("");
     // Initialize selected fields with defaults for this connector
