@@ -6,7 +6,8 @@ import { Label } from "@/components/ui/label";
 import { Upload, Building2, Plus, X, FileSpreadsheet, ArrowLeft, ToggleLeft, ToggleRight } from "lucide-react";
 import { toast } from "sonner";
 import CSVFieldMapper from "./CSVFieldMapper";
-import { useAddCompany, useBulkAddCompanies } from "@/hooks/useCompanies";
+import { useAddCompany, useBulkAddCompanies, useCompanies } from "@/hooks/useCompanies";
+import { FREE_PLAN_LIMITS } from "@/lib/planLimits";
 
 // Fix 3: file size limit
 const MAX_FILE_SIZE_MB = 10;
