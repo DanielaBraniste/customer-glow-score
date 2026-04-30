@@ -478,7 +478,7 @@ const AddCompanyDialog = ({ open, onOpenChange }: AddCompanyDialogProps) => {
             </div>
             <div className="flex justify-end gap-3 mt-4">
               <Button variant="heroOutline" size="sm" onClick={() => handleOpenChange(false)}>Cancel</Button>
-              <Button variant="hero" size="sm" onClick={handleProceedToMapping} disabled={!selectedFile}>
+              <Button variant="hero" size="sm" onClick={handleProceedToMapping} disabled={!selectedFile || atCompanyLimit}>
                 Next: Map Fields
               </Button>
             </div>
