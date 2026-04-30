@@ -201,9 +201,20 @@ const AddCompanyDialog = ({ open, onOpenChange }: AddCompanyDialogProps) => {
     email: string;
     snapshotData: Record<string, any>;
   }>) => {
+    if (atCompanyLimit) {
+      toast.error(`Free plan limit reached (${FREE_PLAN_LIMITS.maxCompanies} companies). Remove companies before importing.`);
+      return;
+    }
+    let toImport = rows;
+    if (rows.length > remainingSlots) {
+      toast.warning(
+        `Only ${remainingSlots} of ${rows.length} rows will be imported (Free plan limit: ${FREE_PLAN_LIMITS.maxCompanies}).`
+      );
+      toImport = rows.slice(0, remainingSlots);
+    }
     try {
       await bulkAddMutation.mutateAsync(
-        rows.map((r) => ({ ...r, source: "csv" }))
+        toImport.map((r) => ({ ...r, source: "csv" }))
       );
       handleOpenChange(false);
     } catch (err) {
