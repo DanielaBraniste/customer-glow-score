@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import CSVFieldMapper from "./CSVFieldMapper";
 import { useAddCompany, useBulkAddCompanies, useCompanies } from "@/hooks/useCompanies";
 import { FREE_PLAN_LIMITS } from "@/lib/planLimits";
+import UpgradeDialog, { UpgradeTriggerReason } from "@/components/UpgradeDialog";
 
 // Fix 3: file size limit
 const MAX_FILE_SIZE_MB = 10;
