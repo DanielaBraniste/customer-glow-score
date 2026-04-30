@@ -21,6 +21,7 @@ import segmentLogo from "@/assets/connectors/segment.png";
 import FieldSelector from "@/components/connectors/FieldSelector";
 import { connectorFields } from "@/components/connectors/connectorFields";
 import { FREE_PLAN_LIMITS } from "@/lib/planLimits";
+import UpgradeDialog from "@/components/UpgradeDialog";
 
 const connectorDefs = [
   {
