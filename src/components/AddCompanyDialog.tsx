@@ -410,7 +410,7 @@ const AddCompanyDialog = ({ open, onOpenChange }: AddCompanyDialogProps) => {
                 variant="hero"
                 size="sm"
                 onClick={handleManualSubmit}
-                disabled={addCompanyMutation.isPending || atCompanyLimit}
+                disabled={addCompanyMutation.isPending}
               >
                 {addCompanyMutation.isPending ? "Adding…" : "Add Company"}
               </Button>
