@@ -140,7 +140,7 @@ const AddCompanyDialog = ({ open, onOpenChange }: AddCompanyDialogProps) => {
       return;
     }
     if (atCompanyLimit) {
-      toast.error(`Free plan limit reached (${FREE_PLAN_LIMITS.maxCompanies} companies). Remove a company to add a new one.`);
+      openUpgrade("company_limit_manual", companyCount + 1);
       return;
     }
 
