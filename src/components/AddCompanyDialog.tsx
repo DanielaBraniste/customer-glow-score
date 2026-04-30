@@ -510,6 +510,14 @@ const AddCompanyDialog = ({ open, onOpenChange }: AddCompanyDialogProps) => {
           />
         )}
       </DialogContent>
+      <UpgradeDialog
+        open={upgrade.open}
+        onOpenChange={(o) => setUpgrade((u) => ({ ...u, open: o }))}
+        reason={upgrade.reason}
+        attemptedCount={upgrade.attemptedCount}
+        currentCount={companyCount}
+        planLimit={FREE_PLAN_LIMITS.maxCompanies}
+      />
     </Dialog>
   );
 };
