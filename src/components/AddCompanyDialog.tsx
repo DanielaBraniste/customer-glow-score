@@ -225,6 +225,12 @@ const AddCompanyDialog = ({ open, onOpenChange }: AddCompanyDialogProps) => {
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className={`bg-card border-border ${mode === "mapping" ? "sm:max-w-2xl" : "sm:max-w-lg"}`}>
+        {mode !== "mapping" && (
+          <div className={`text-xs rounded-md border px-3 py-2 ${atCompanyLimit ? "border-destructive/40 bg-destructive/10 text-destructive" : "border-border bg-secondary/40 text-muted-foreground"}`}>
+            <span className="font-medium text-foreground">Free plan:</span> {companyCount} / {FREE_PLAN_LIMITS.maxCompanies} companies used
+            {atCompanyLimit && " — limit reached"}
+          </div>
+        )}
         {mode === "choose" && (
           <>
             <DialogHeader>
