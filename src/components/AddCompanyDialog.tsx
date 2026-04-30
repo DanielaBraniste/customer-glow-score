@@ -212,15 +212,14 @@ const AddCompanyDialog = ({ open, onOpenChange }: AddCompanyDialogProps) => {
     snapshotData: Record<string, any>;
   }>) => {
     if (atCompanyLimit) {
-      toast.error(`Free plan limit reached (${FREE_PLAN_LIMITS.maxCompanies} companies). Remove companies before importing.`);
+      openUpgrade("company_limit_csv", companyCount + rows.length);
       return;
     }
     let toImport = rows;
     if (rows.length > remainingSlots) {
-      toast.warning(
-        `Only ${remainingSlots} of ${rows.length} rows will be imported (Free plan limit: ${FREE_PLAN_LIMITS.maxCompanies}).`
-      );
+      openUpgrade("company_limit_csv", companyCount + rows.length);
       toImport = rows.slice(0, remainingSlots);
+      if (toImport.length === 0) return;
     }
     try {
       await bulkAddMutation.mutateAsync(
