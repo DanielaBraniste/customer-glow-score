@@ -64,6 +64,10 @@ const AddCompanyDialog = ({ open, onOpenChange }: AddCompanyDialogProps) => {
 
   const addCompanyMutation = useAddCompany();
   const bulkAddMutation = useBulkAddCompanies();
+  const { data: companies = [] } = useCompanies();
+  const companyCount = companies.length;
+  const remainingSlots = Math.max(0, FREE_PLAN_LIMITS.maxCompanies - companyCount);
+  const atCompanyLimit = companyCount >= FREE_PLAN_LIMITS.maxCompanies;
 
   const redistributeWeights = useCallback((customCount: number, indScored: boolean, mScored: boolean) => {
     const total = 1 + (indScored ? 1 : 0) + (mScored ? 1 : 0) + customCount;
