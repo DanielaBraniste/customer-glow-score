@@ -244,6 +244,45 @@ export type Database = {
         }
         Relationships: []
       }
+      upgrade_requests: {
+        Row: {
+          attempted_count: number | null
+          created_at: string
+          current_count: number | null
+          email: string | null
+          id: string
+          notes: string | null
+          plan_limit: number | null
+          scheduled_call: boolean
+          trigger_reason: string
+          user_id: string | null
+        }
+        Insert: {
+          attempted_count?: number | null
+          created_at?: string
+          current_count?: number | null
+          email?: string | null
+          id?: string
+          notes?: string | null
+          plan_limit?: number | null
+          scheduled_call?: boolean
+          trigger_reason: string
+          user_id?: string | null
+        }
+        Update: {
+          attempted_count?: number | null
+          created_at?: string
+          current_count?: number | null
+          email?: string | null
+          id?: string
+          notes?: string | null
+          plan_limit?: number | null
+          scheduled_call?: boolean
+          trigger_reason?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       user_connectors: {
         Row: {
           api_key: string | null
