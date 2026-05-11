@@ -22,6 +22,7 @@ import WhatIsCustomerHealthScore from "./pages/blog/WhatIsCustomerHealthScore";
 import CustomerHealthScoreVsNps from "./pages/blog/CustomerHealthScoreVsNps";
 import CustomerSuccessKpis from "./pages/blog/CustomerSuccessKpis";
 import Contact from "./pages/Contact";
+import CompanyDetail from "./pages/CompanyDetail";
 
 const queryClient = new QueryClient();
 
@@ -57,6 +58,7 @@ const App = () => (
               <Route path="/blog/customer-health-score-vs-nps" element={<CustomerHealthScoreVsNps />} />
               <Route path="/blog/customer-success-kpis-saas-2026" element={<CustomerSuccessKpis />} />
               <Route path="/contact" element={<Contact />} />
+              <Route path="/company/:id" element={<ProtectedRoute><CompanyDetail /></ProtectedRoute>} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </AuthProvider>

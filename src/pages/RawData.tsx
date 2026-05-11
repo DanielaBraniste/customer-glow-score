@@ -199,6 +199,7 @@ const RawData = () => {
         return {
           id: s.id,
           date: s.snapshot_date,
+          companyId: s.company_id,
           company: company?.name || "Unknown",
           industry: company?.industry || "",
           source: s.source || "manual",
@@ -610,7 +611,18 @@ const RawData = () => {
                   filtered.map((row) => (
                     <TableRow key={row.id}>
                       <TableCell className="sticky left-0 bg-card text-muted-foreground text-xs font-mono">{row.date}</TableCell>
-                      <TableCell className="sticky left-[100px] bg-card font-medium">{row.company}</TableCell>
+                      <TableCell className="sticky left-[100px] bg-card font-medium">
+                        {row.companyId ? (
+                          <button
+                            onClick={() => navigate(`/company/${row.companyId}`)}
+                            className="text-left hover:text-primary hover:underline transition-colors"
+                          >
+                            {row.company}
+                          </button>
+                        ) : (
+                          row.company
+                        )}
+                      </TableCell>
                       <TableCell>
                         <span className="inline-flex items-center rounded-full bg-secondary px-2 py-0.5 text-xs font-medium text-secondary-foreground">
                           {getSourceLabel(row.source)}

@@ -175,7 +175,16 @@ const HealthProgression = () => {
                       return (
                         <TableRow key={company.companyId}>
                           <TableCell className="font-medium sticky left-0 z-10 bg-card">
-                            {company.companyName}
+                            {isDemo ? (
+                              company.companyName
+                            ) : (
+                              <button
+                                onClick={() => navigate(`/company/${company.companyId}`)}
+                                className="text-left hover:text-primary hover:underline transition-colors"
+                              >
+                                {company.companyName}
+                              </button>
+                            )}
                           </TableCell>
                           <TableCell className="text-muted-foreground text-sm">
                             {company.customerSince}

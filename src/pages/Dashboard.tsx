@@ -368,7 +368,14 @@ const Dashboard = () => {
                           aria-label={`Select ${company.name}`}
                         />
                       </TableCell>
-                      <TableCell className="font-medium">{company.name}</TableCell>
+                      <TableCell className="font-medium">
+                        <button
+                          onClick={() => navigate(`/company/${company.id}`)}
+                          className="text-left hover:text-primary hover:underline transition-colors"
+                        >
+                          {company.name}
+                        </button>
+                      </TableCell>
                       <TableCell className="text-muted-foreground">{company.industry}</TableCell>
                       <TableCell>
                         <Tooltip>
