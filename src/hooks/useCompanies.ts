@@ -98,6 +98,11 @@ export function useAddCompany() {
 
       if (cErr) throw cErr;
 
+      const health_score = calculateHealthScore(
+        { ...input.snapshotData, industry: input.industry },
+        DEFAULT_SCORE_FIELDS,
+      ).total;
+
       const { error: sErr } = await supabase
         .from("company_snapshots")
         .insert({
@@ -105,6 +110,7 @@ export function useAddCompany() {
           user_id: user.id,
           source: input.source || "manual",
           data: input.snapshotData,
+          health_score,
         });
 
       // Fix 6: clean up orphan on snapshot failure
