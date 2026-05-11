@@ -21,6 +21,7 @@ import {
 import { toast } from "sonner";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { calculateHealthScore, DEFAULT_SCORE_FIELDS } from "@/lib/healthScore";
 
 // ── Sort utilities ──────────────────────────────────────────────
 type SortDirection = "asc" | "desc" | null;
