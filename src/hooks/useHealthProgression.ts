@@ -152,17 +152,19 @@ export function useHealthProgression(granularity: TimeGranularity) {
         const latestSnap = allSnapsForCompany.length > 0 ? allSnapsForCompany[allSnapsForCompany.length - 1] : null;
         const latestData = (latestSnap?.data || {}) as Record<string, any>;
 
+        const computeScore = (snap: any) => {
+          if (snap?.health_score != null) return snap.health_score as number;
+          const scoreData = { ...(snap.data as Record<string, any>), industry: c.industry };
+          return calculateHealthScore(scoreData, DEFAULT_SCORE_FIELDS).total;
+        };
+
         for (const period of periods) {
           const snap = periodSnapshots.get(period);
           if (snap) {
-            const scoreData = { ...(snap.data as Record<string, any>), industry: c.industry };
-            const scoreResult = calculateHealthScore(scoreData, DEFAULT_SCORE_FIELDS);
-            scores[period] = scoreResult.total;
+            scores[period] = computeScore(snap);
           } else if (latestSnap) {
             // Fill missing periods with latest known score so the table isn't empty
-            const scoreData = { ...latestData, industry: c.industry };
-            const scoreResult = calculateHealthScore(scoreData, DEFAULT_SCORE_FIELDS);
-            scores[period] = scoreResult.total;
+            scores[period] = computeScore(latestSnap);
           }
         }
 
