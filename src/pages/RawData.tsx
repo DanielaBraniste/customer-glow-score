@@ -293,9 +293,10 @@ const RawData = () => {
         }
       });
 
+      const scoreFieldsForEdit = savedFields ? toScoreFields(savedFields as UiFieldConfig[]) : DEFAULT_SCORE_FIELDS;
       const health_score = calculateHealthScore(
         { ...newData, industry: editRow.industry },
-        DEFAULT_SCORE_FIELDS,
+        scoreFieldsForEdit,
       ).total;
 
       const { error } = await supabase
