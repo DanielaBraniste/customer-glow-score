@@ -7,6 +7,8 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { calculateHealthScore, DEFAULT_SCORE_FIELDS } from "@/lib/healthScore";
+import { useScoreFields } from "@/hooks/useScoreFields";
+import { toScoreFields } from "@/lib/scoreFields";
 import UserProfile from "@/components/UserProfile";
 import { useMemo } from "react";
 
