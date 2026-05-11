@@ -174,8 +174,7 @@ export function useBulkAddCompanies() {
       const skipped = rows.length - newRows.length;
 
       let totalAdded = 0;
-
-      // Fix 4: batch inserts in chunks
+      const scoreFields = await loadUserScoreFields(user.id);
       for (let i = 0; i < newRows.length; i += BATCH_SIZE) {
         const chunk = newRows.slice(i, i + BATCH_SIZE);
 
