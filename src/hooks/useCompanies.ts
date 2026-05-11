@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import { calculateHealthScore, DEFAULT_SCORE_FIELDS } from "@/lib/healthScore";
 
 export interface Company {
   id: string;
@@ -97,6 +98,11 @@ export function useAddCompany() {
 
       if (cErr) throw cErr;
 
+      const health_score = calculateHealthScore(
+        { ...input.snapshotData, industry: input.industry },
+        DEFAULT_SCORE_FIELDS,
+      ).total;
+
       const { error: sErr } = await supabase
         .from("company_snapshots")
         .insert({
@@ -104,6 +110,7 @@ export function useAddCompany() {
           user_id: user.id,
           source: input.source || "manual",
           data: input.snapshotData,
+          health_score,
         });
 
       // Fix 6: clean up orphan on snapshot failure
@@ -183,11 +190,16 @@ export function useBulkAddCompanies() {
           .map((row) => {
             const company = nameMap.get(row.name.toLowerCase().trim());
             if (!company) return null;
+            const health_score = calculateHealthScore(
+              { ...row.snapshotData, industry: row.industry },
+              DEFAULT_SCORE_FIELDS,
+            ).total;
             return {
               company_id: company.id,
               user_id: user.id,
               source: row.source || "csv",
               data: row.snapshotData,
+              health_score,
             };
           })
           .filter(Boolean) as Array<{
@@ -195,6 +207,7 @@ export function useBulkAddCompanies() {
             user_id: string;
             source: string;
             data: Record<string, any>;
+            health_score: number;
           }>;
 
         const { error: sErr } = await supabase

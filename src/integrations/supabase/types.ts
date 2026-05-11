@@ -46,6 +46,7 @@ export type Database = {
           company_id: string
           created_at: string
           data: Json
+          health_score: number | null
           id: string
           snapshot_date: string
           source: string
@@ -55,6 +56,7 @@ export type Database = {
           company_id: string
           created_at?: string
           data?: Json
+          health_score?: number | null
           id?: string
           snapshot_date?: string
           source?: string
@@ -64,6 +66,7 @@ export type Database = {
           company_id?: string
           created_at?: string
           data?: Json
+          health_score?: number | null
           id?: string
           snapshot_date?: string
           source?: string
