@@ -199,6 +199,7 @@ const RawData = () => {
         return {
           id: s.id,
           date: s.snapshot_date,
+          companyId: s.company_id,
           company: company?.name || "Unknown",
           industry: company?.industry || "",
           source: s.source || "manual",
