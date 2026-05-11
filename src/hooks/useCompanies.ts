@@ -3,6 +3,19 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { calculateHealthScore, DEFAULT_SCORE_FIELDS } from "@/lib/healthScore";
+import { toScoreFields, UiFieldConfig } from "@/lib/scoreFields";
+
+async function loadUserScoreFields(userId: string) {
+  const { data } = await supabase
+    .from("profiles")
+    .select("score_fields")
+    .eq("user_id", userId)
+    .maybeSingle();
+  const saved = data?.score_fields as unknown as UiFieldConfig[] | null;
+  return saved && Array.isArray(saved) && saved.length
+    ? toScoreFields(saved)
+    : DEFAULT_SCORE_FIELDS;
+}
 
 export interface Company {
   id: string;
