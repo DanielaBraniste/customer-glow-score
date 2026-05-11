@@ -144,23 +144,24 @@ const Dashboard = () => {
   }, [user]);
 
   const { data: rawCompanies = [], isLoading } = useCompanies();
+  const { data: uiFields } = useScoreFields();
 
   const companies = useMemo(() => {
+    const scoreFields = uiFields ? toScoreFields(uiFields) : DEFAULT_SCORE_FIELDS;
     return rawCompanies.map((c) => {
-      const scoreData = {
-        ...c.snapshotData,
-        industry: c.industry,
-      };
-      const result = calculateHealthScore(scoreData, DEFAULT_SCORE_FIELDS);
+      const scoreData = { ...c.snapshotData, industry: c.industry };
+      const result = calculateHealthScore(scoreData, scoreFields);
+      // Prefer the persisted score on the latest snapshot when available
+      const healthScore = c.storedHealthScore ?? result.total;
       return {
         ...c,
-        healthScore: result.total,
+        healthScore,
         breakdown: result.breakdown,
-        status: getStatus(result.total),
+        status: getStatus(healthScore),
         lastLogin: (c.snapshotData?.lastLogin as string) || "—",
       };
     });
-  }, [rawCompanies]);
+  }, [rawCompanies, uiFields]);
 
   const avgScore = companies.length
     ? Math.round(companies.reduce((s, c) => s + c.healthScore, 0) / companies.length)
