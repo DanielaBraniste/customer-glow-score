@@ -209,6 +209,7 @@ export type Database = {
           last_notified_at: string | null
           notification_frequency: Database["public"]["Enums"]["notification_frequency"]
           plan: Database["public"]["Enums"]["plan_tier"]
+          score_fields: Json | null
           slack_notifications: boolean
           slack_webhook_url: string | null
           updated_at: string
@@ -224,6 +225,7 @@ export type Database = {
           last_notified_at?: string | null
           notification_frequency?: Database["public"]["Enums"]["notification_frequency"]
           plan?: Database["public"]["Enums"]["plan_tier"]
+          score_fields?: Json | null
           slack_notifications?: boolean
           slack_webhook_url?: string | null
           updated_at?: string
@@ -239,6 +241,7 @@ export type Database = {
           last_notified_at?: string | null
           notification_frequency?: Database["public"]["Enums"]["notification_frequency"]
           plan?: Database["public"]["Enums"]["plan_tier"]
+          score_fields?: Json | null
           slack_notifications?: boolean
           slack_webhook_url?: string | null
           updated_at?: string
