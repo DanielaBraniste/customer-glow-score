@@ -207,7 +207,7 @@ export function useBulkAddCompanies() {
             if (!company) return null;
             const health_score = calculateHealthScore(
               { ...row.snapshotData, industry: row.industry },
-              DEFAULT_SCORE_FIELDS,
+              scoreFields,
             ).total;
             return {
               company_id: company.id,
