@@ -113,9 +113,10 @@ export function useAddCompany() {
 
       if (cErr) throw cErr;
 
+      const scoreFields = await loadUserScoreFields(user.id);
       const health_score = calculateHealthScore(
         { ...input.snapshotData, industry: input.industry },
-        DEFAULT_SCORE_FIELDS,
+        scoreFields,
       ).total;
 
       const { error: sErr } = await supabase
