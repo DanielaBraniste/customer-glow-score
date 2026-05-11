@@ -793,6 +793,13 @@ const RawData = () => {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+
+        <RecalcScoresDialog
+          open={recalcOpen}
+          onOpenChange={setRecalcOpen}
+          onConfirm={handleConfirmRecalc}
+          isSaving={saveScoreFields.isPending}
+        />
       </div>
     </div>
   );
