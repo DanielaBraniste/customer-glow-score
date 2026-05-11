@@ -242,9 +242,14 @@ const RawData = () => {
         }
       });
 
+      const health_score = calculateHealthScore(
+        { ...newData, industry: editRow.industry },
+        DEFAULT_SCORE_FIELDS,
+      ).total;
+
       const { error } = await supabase
         .from("company_snapshots")
-        .update({ data: newData })
+        .update({ data: newData, health_score })
         .eq("id", editRow.id)
         .eq("user_id", user.id);
 
