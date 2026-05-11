@@ -46,6 +46,7 @@ const CompanyDetail = () => {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { data: uiFields } = useScoreFields();
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["company-detail", id, user?.id],
