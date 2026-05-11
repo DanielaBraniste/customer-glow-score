@@ -58,6 +58,7 @@ const App = () => (
               <Route path="/blog/customer-health-score-vs-nps" element={<CustomerHealthScoreVsNps />} />
               <Route path="/blog/customer-success-kpis-saas-2026" element={<CustomerSuccessKpis />} />
               <Route path="/contact" element={<Contact />} />
+              <Route path="/company/:id" element={<ProtectedRoute><CompanyDetail /></ProtectedRoute>} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </AuthProvider>
