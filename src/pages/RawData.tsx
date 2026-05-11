@@ -144,11 +144,59 @@ const RawData = () => {
   const [search, setSearch] = useState("");
   const [dateFilter, setDateFilter] = useState("all");
   const [sourceFilter, setSourceFilter] = useState("all");
+  const { data: savedFields } = useScoreFields();
+  const saveScoreFields = useSaveScoreFields();
   const [fields, setFields] = useState<FieldConfig[]>(defaultFields);
+  const [recalcOpen, setRecalcOpen] = useState(false);
   const [newFieldName, setNewFieldName] = useState("");
   const [newFieldType, setNewFieldType] = useState<"number" | "date" | "text">("number");
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [sort, setSort] = useState<SortConfig>({ key: "", direction: null });
+
+  // Sync local fields with the user's saved configuration when it loads/changes.
+  useEffect(() => {
+    if (savedFields && savedFields.length) {
+      setFields(savedFields as FieldConfig[]);
+    }
+  }, [savedFields]);
+
+  const hasUnsavedWeightChanges = useMemo(() => {
+    if (!savedFields) return false;
+    return JSON.stringify(savedFields) !== JSON.stringify(fields);
+  }, [savedFields, fields]);
+
+  const handleSaveWeights = () => {
+    if (!savedFields) return;
+    if (fieldsScoringDiffers(savedFields as UiFieldConfig[], fields as UiFieldConfig[])) {
+      setRecalcOpen(true);
+    } else {
+      // Only labels/visibility/ordering changed — save without prompting
+      saveScoreFields.mutate(
+        { fields: fields as UiFieldConfig[], recalcHistory: false },
+        {
+          onSuccess: () => toast.success("Field configuration saved"),
+          onError: (e: any) => toast.error(e.message || "Failed to save"),
+        },
+      );
+    }
+  };
+
+  const handleConfirmRecalc = (recalcHistory: boolean) => {
+    saveScoreFields.mutate(
+      { fields: fields as UiFieldConfig[], recalcHistory },
+      {
+        onSuccess: (res) => {
+          setRecalcOpen(false);
+          if (recalcHistory) {
+            toast.success(`Weights saved. Recalculated ${res.recalculated} snapshot${res.recalculated === 1 ? "" : "s"}.`);
+          } else {
+            toast.success("Weights saved. Future imports will use the new weights.");
+          }
+        },
+        onError: (e: any) => toast.error(e.message || "Failed to save"),
+      },
+    );
+  };
 
   // Edit/Delete state
   const [editRow, setEditRow] = useState<Record<string, any> | null>(null);
