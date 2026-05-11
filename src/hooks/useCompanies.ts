@@ -15,6 +15,7 @@ export interface CompanyWithSnapshot extends Company {
   snapshotData: Record<string, any>;
   snapshotDate: string | null;
   source: string;
+  storedHealthScore: number | null;
 }
 
 export function useCompanies() {
@@ -57,6 +58,7 @@ export function useCompanies() {
           snapshotData: snap?.data || {},
           snapshotDate: snap?.snapshot_date || null,
           source: snap?.source || "manual",
+          storedHealthScore: snap?.health_score ?? null,
         };
       });
     },
