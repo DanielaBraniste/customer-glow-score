@@ -519,6 +519,31 @@ const RawData = () => {
                     </span>
                   </div>
 
+                  {/* Save weights */}
+                  <div className="flex items-center justify-between gap-2 mb-4 p-3 rounded-lg border border-border bg-muted/20">
+                    <div className="text-xs">
+                      <div className="font-medium text-foreground">
+                        {hasUnsavedWeightChanges ? "Unsaved changes" : "Weights are saved"}
+                      </div>
+                      <div className="text-muted-foreground mt-0.5">
+                        {hasUnsavedWeightChanges
+                          ? "Save to apply across the app."
+                          : "Adjust sliders above to update scoring."}
+                      </div>
+                    </div>
+                    <Button
+                      size="sm"
+                      onClick={handleSaveWeights}
+                      disabled={!hasUnsavedWeightChanges || saveScoreFields.isPending || totalWeight === 0}
+                    >
+                      {saveScoreFields.isPending ? (
+                        <><Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> Saving</>
+                      ) : (
+                        "Save weights"
+                      )}
+                    </Button>
+                  </div>
+
                   {/* Fields list */}
                   {fields.map((field) => (
                     <div
