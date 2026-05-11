@@ -48,6 +48,46 @@ async function loadCompanyMap(supabase: ReturnType<typeof createClient>, userId:
   return new Map((data || []).map((c: any) => [c.name.toLowerCase().trim(), c]));
 }
 
+// ---------- Health score calculation (mirrors src/lib/healthScore.ts) ----------
+const GRACE_DAYS = 3;
+const MAX_DAYS = 30;
+const scoreDateRecency = (dateStr: string): number => {
+  if (!dateStr) return 0;
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return 0;
+  const days = Math.max(0, (Date.now() - d.getTime()) / 86400000);
+  if (days <= GRACE_DAYS) return 100;
+  if (days >= MAX_DAYS) return 0;
+  return Math.round(100 * (1 - (days - GRACE_DAYS) / (MAX_DAYS - GRACE_DAYS)));
+};
+const scoreNumber = (value: number, min: number, max: number, invert = false): number => {
+  if (max === min) return 50;
+  const clamped = Math.max(min, Math.min(max, value));
+  const n = (clamped - min) / (max - min);
+  return Math.round((invert ? 1 - n : n) * 100);
+};
+const SCORE_FIELDS = [
+  { key: "mrr", weight: 20, type: "number", min: 0, max: 30000 },
+  { key: "nps", weight: 20, type: "nps" },
+  { key: "lastLogin", weight: 10, type: "date" },
+  { key: "supportTickets", weight: 15, type: "number", min: 0, max: 20, invert: true },
+  { key: "contractEnd", weight: 10, type: "date" },
+  { key: "usageScore", weight: 25, type: "number", min: 0, max: 100 },
+] as const;
+function computeHealthScore(data: Record<string, any>): number {
+  const totalWeight = SCORE_FIELDS.reduce((s, f) => s + f.weight, 0);
+  let total = 0;
+  for (const f of SCORE_FIELDS) {
+    const raw = data[f.key];
+    let fs = 0;
+    if (f.type === "date") fs = scoreDateRecency(String(raw ?? ""));
+    else if (f.type === "nps") fs = scoreNumber(Number(raw) || 0, -100, 100);
+    else fs = scoreNumber(Number(raw) || 0, (f as any).min ?? 0, (f as any).max ?? 100, (f as any).invert);
+    total += fs * (f.weight / totalWeight);
+  }
+  return Math.round(total);
+}
+
 async function upsertCompanySnapshot(
   supabase: ReturnType<typeof createClient>,
   companyId: string,
@@ -64,10 +104,11 @@ async function upsertCompanySnapshot(
       if (key in snapshotData) filteredData[key] = snapshotData[key];
     }
   }
+  const health_score = computeHealthScore(filteredData);
   const { error } = await supabase
     .from("company_snapshots")
     .upsert(
-      { company_id: companyId, user_id: userId, source, data: filteredData },
+      { company_id: companyId, user_id: userId, source, data: filteredData, health_score },
       { onConflict: "company_id,snapshot_date" }
     );
   return error;
