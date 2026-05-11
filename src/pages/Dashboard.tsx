@@ -14,6 +14,8 @@ import { supabase } from "@/integrations/supabase/client";
 import AddCompanyDialog from "@/components/AddCompanyDialog";
 import DeduplicateBanner from "@/components/DeduplicateBanner";
 import { calculateHealthScore, DEFAULT_SCORE_FIELDS } from "@/lib/healthScore";
+import { useScoreFields } from "@/hooks/useScoreFields";
+import { toScoreFields } from "@/lib/scoreFields";
 import {
   Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
 } from "@/components/ui/tooltip";
