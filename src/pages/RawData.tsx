@@ -12,6 +12,9 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { useState, useEffect, useMemo } from "react";
+import RecalcScoresDialog from "@/components/RecalcScoresDialog";
+import { useScoreFields, useSaveScoreFields } from "@/hooks/useScoreFields";
+import { toScoreFields, fieldsScoringDiffers, UiFieldConfig } from "@/lib/scoreFields";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription,
 } from "@/components/ui/dialog";
