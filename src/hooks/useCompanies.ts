@@ -190,11 +190,16 @@ export function useBulkAddCompanies() {
           .map((row) => {
             const company = nameMap.get(row.name.toLowerCase().trim());
             if (!company) return null;
+            const health_score = calculateHealthScore(
+              { ...row.snapshotData, industry: row.industry },
+              DEFAULT_SCORE_FIELDS,
+            ).total;
             return {
               company_id: company.id,
               user_id: user.id,
               source: row.source || "csv",
               data: row.snapshotData,
+              health_score,
             };
           })
           .filter(Boolean) as Array<{
@@ -202,6 +207,7 @@ export function useBulkAddCompanies() {
             user_id: string;
             source: string;
             data: Record<string, any>;
+            health_score: number;
           }>;
 
         const { error: sErr } = await supabase
