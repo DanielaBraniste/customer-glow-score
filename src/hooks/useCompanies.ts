@@ -3,6 +3,19 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { calculateHealthScore, DEFAULT_SCORE_FIELDS } from "@/lib/healthScore";
+import { toScoreFields, UiFieldConfig } from "@/lib/scoreFields";
+
+async function loadUserScoreFields(userId: string) {
+  const { data } = await supabase
+    .from("profiles")
+    .select("score_fields")
+    .eq("user_id", userId)
+    .maybeSingle();
+  const saved = data?.score_fields as unknown as UiFieldConfig[] | null;
+  return saved && Array.isArray(saved) && saved.length
+    ? toScoreFields(saved)
+    : DEFAULT_SCORE_FIELDS;
+}
 
 export interface Company {
   id: string;
@@ -15,6 +28,7 @@ export interface CompanyWithSnapshot extends Company {
   snapshotData: Record<string, any>;
   snapshotDate: string | null;
   source: string;
+  storedHealthScore: number | null;
 }
 
 export function useCompanies() {
@@ -57,6 +71,7 @@ export function useCompanies() {
           snapshotData: snap?.data || {},
           snapshotDate: snap?.snapshot_date || null,
           source: snap?.source || "manual",
+          storedHealthScore: snap?.health_score ?? null,
         };
       });
     },
@@ -98,9 +113,10 @@ export function useAddCompany() {
 
       if (cErr) throw cErr;
 
+      const scoreFields = await loadUserScoreFields(user.id);
       const health_score = calculateHealthScore(
         { ...input.snapshotData, industry: input.industry },
-        DEFAULT_SCORE_FIELDS,
+        scoreFields,
       ).total;
 
       const { error: sErr } = await supabase
@@ -158,8 +174,7 @@ export function useBulkAddCompanies() {
       const skipped = rows.length - newRows.length;
 
       let totalAdded = 0;
-
-      // Fix 4: batch inserts in chunks
+      const scoreFields = await loadUserScoreFields(user.id);
       for (let i = 0; i < newRows.length; i += BATCH_SIZE) {
         const chunk = newRows.slice(i, i + BATCH_SIZE);
 
@@ -192,7 +207,7 @@ export function useBulkAddCompanies() {
             if (!company) return null;
             const health_score = calculateHealthScore(
               { ...row.snapshotData, industry: row.industry },
-              DEFAULT_SCORE_FIELDS,
+              scoreFields,
             ).total;
             return {
               company_id: company.id,

@@ -12,6 +12,9 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { useState, useEffect, useMemo } from "react";
+import RecalcScoresDialog from "@/components/RecalcScoresDialog";
+import { useScoreFields, useSaveScoreFields } from "@/hooks/useScoreFields";
+import { toScoreFields, fieldsScoringDiffers, UiFieldConfig } from "@/lib/scoreFields";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription,
 } from "@/components/ui/dialog";
@@ -141,11 +144,59 @@ const RawData = () => {
   const [search, setSearch] = useState("");
   const [dateFilter, setDateFilter] = useState("all");
   const [sourceFilter, setSourceFilter] = useState("all");
+  const { data: savedFields } = useScoreFields();
+  const saveScoreFields = useSaveScoreFields();
   const [fields, setFields] = useState<FieldConfig[]>(defaultFields);
+  const [recalcOpen, setRecalcOpen] = useState(false);
   const [newFieldName, setNewFieldName] = useState("");
   const [newFieldType, setNewFieldType] = useState<"number" | "date" | "text">("number");
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [sort, setSort] = useState<SortConfig>({ key: "", direction: null });
+
+  // Sync local fields with the user's saved configuration when it loads/changes.
+  useEffect(() => {
+    if (savedFields && savedFields.length) {
+      setFields(savedFields as FieldConfig[]);
+    }
+  }, [savedFields]);
+
+  const hasUnsavedWeightChanges = useMemo(() => {
+    if (!savedFields) return false;
+    return JSON.stringify(savedFields) !== JSON.stringify(fields);
+  }, [savedFields, fields]);
+
+  const handleSaveWeights = () => {
+    if (!savedFields) return;
+    if (fieldsScoringDiffers(savedFields as UiFieldConfig[], fields as UiFieldConfig[])) {
+      setRecalcOpen(true);
+    } else {
+      // Only labels/visibility/ordering changed — save without prompting
+      saveScoreFields.mutate(
+        { fields: fields as UiFieldConfig[], recalcHistory: false },
+        {
+          onSuccess: () => toast.success("Field configuration saved"),
+          onError: (e: any) => toast.error(e.message || "Failed to save"),
+        },
+      );
+    }
+  };
+
+  const handleConfirmRecalc = (recalcHistory: boolean) => {
+    saveScoreFields.mutate(
+      { fields: fields as UiFieldConfig[], recalcHistory },
+      {
+        onSuccess: (res) => {
+          setRecalcOpen(false);
+          if (recalcHistory) {
+            toast.success(`Weights saved. Recalculated ${res.recalculated} snapshot${res.recalculated === 1 ? "" : "s"}.`);
+          } else {
+            toast.success("Weights saved. Future imports will use the new weights.");
+          }
+        },
+        onError: (e: any) => toast.error(e.message || "Failed to save"),
+      },
+    );
+  };
 
   // Edit/Delete state
   const [editRow, setEditRow] = useState<Record<string, any> | null>(null);
@@ -242,9 +293,10 @@ const RawData = () => {
         }
       });
 
+      const scoreFieldsForEdit = savedFields ? toScoreFields(savedFields as UiFieldConfig[]) : DEFAULT_SCORE_FIELDS;
       const health_score = calculateHealthScore(
         { ...newData, industry: editRow.industry },
-        DEFAULT_SCORE_FIELDS,
+        scoreFieldsForEdit,
       ).total;
 
       const { error } = await supabase
@@ -465,6 +517,31 @@ const RawData = () => {
                     <span className={`font-mono font-semibold ${totalWeight === 100 ? "text-primary" : "text-destructive"}`}>
                       {totalWeight}%{totalWeight !== 100 && " (should be 100%)"}
                     </span>
+                  </div>
+
+                  {/* Save weights */}
+                  <div className="flex items-center justify-between gap-2 mb-4 p-3 rounded-lg border border-border bg-muted/20">
+                    <div className="text-xs">
+                      <div className="font-medium text-foreground">
+                        {hasUnsavedWeightChanges ? "Unsaved changes" : "Weights are saved"}
+                      </div>
+                      <div className="text-muted-foreground mt-0.5">
+                        {hasUnsavedWeightChanges
+                          ? "Save to apply across the app."
+                          : "Adjust sliders above to update scoring."}
+                      </div>
+                    </div>
+                    <Button
+                      size="sm"
+                      onClick={handleSaveWeights}
+                      disabled={!hasUnsavedWeightChanges || saveScoreFields.isPending || totalWeight === 0}
+                    >
+                      {saveScoreFields.isPending ? (
+                        <><Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> Saving</>
+                      ) : (
+                        "Save weights"
+                      )}
+                    </Button>
                   </div>
 
                   {/* Fields list */}
@@ -716,6 +793,13 @@ const RawData = () => {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+
+        <RecalcScoresDialog
+          open={recalcOpen}
+          onOpenChange={setRecalcOpen}
+          onConfirm={handleConfirmRecalc}
+          isSaving={saveScoreFields.isPending}
+        />
       </div>
     </div>
   );

@@ -7,6 +7,8 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { calculateHealthScore, DEFAULT_SCORE_FIELDS } from "@/lib/healthScore";
+import { useScoreFields } from "@/hooks/useScoreFields";
+import { toScoreFields } from "@/lib/scoreFields";
 import UserProfile from "@/components/UserProfile";
 import { useMemo } from "react";
 
@@ -44,6 +46,7 @@ const CompanyDetail = () => {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { data: uiFields } = useScoreFields();
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["company-detail", id, user?.id],
@@ -86,11 +89,15 @@ const CompanyDetail = () => {
   const latestSnapshot = data?.snapshots[0];
   const scoreResult = useMemo(() => {
     if (!latestSnapshot) return null;
-    return calculateHealthScore(
+    const scoreFields = uiFields ? toScoreFields(uiFields) : DEFAULT_SCORE_FIELDS;
+    const computed = calculateHealthScore(
       { ...(latestSnapshot.data as Record<string, any>), industry: data?.company.industry },
-      DEFAULT_SCORE_FIELDS
+      scoreFields,
     );
-  }, [latestSnapshot, data]);
+    // Prefer the persisted score on the snapshot when available
+    const stored = (latestSnapshot as any).health_score;
+    return stored != null ? { ...computed, total: stored } : computed;
+  }, [latestSnapshot, data, uiFields]);
 
   if (isLoading) {
     return (
