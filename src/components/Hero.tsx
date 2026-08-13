@@ -14,7 +14,13 @@ const Hero = () => (
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.8 }}
       >
-        <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-4 py-1.5 mb-8 mt-8">
+        <div className="flex justify-center mb-8 mt-8">
+          <div className="h-16 w-16 rounded-2xl bg-primary flex items-center justify-center shadow-lg shadow-primary/30">
+            <span className="text-primary-foreground font-bold text-3xl">R</span>
+          </div>
+        </div>
+
+        <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-4 py-1.5 mb-8">
           <span className="h-2 w-2 rounded-full bg-primary animate-pulse-glow" />
           <span className="text-sm font-medium text-primary">Now in Public Beta</span>
         </div>
