@@ -23,6 +23,7 @@ import CustomerHealthScoreVsNps from "./pages/blog/CustomerHealthScoreVsNps";
 import CustomerSuccessKpis from "./pages/blog/CustomerSuccessKpis";
 import Contact from "./pages/Contact";
 import CompanyDetail from "./pages/CompanyDetail";
+import ImpersonationBanner from "@/components/ImpersonationBanner";
 
 const queryClient = new QueryClient();
 
@@ -41,6 +42,7 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <AuthProvider>
+            <ImpersonationBanner />
             <Routes>
               <Route path="/" element={<Index />} />
               <Route path="/auth" element={<Auth />} />
