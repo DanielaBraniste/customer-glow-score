@@ -133,6 +133,30 @@ Deno.serve(async (req) => {
       });
     }
 
+    if (action === "impersonate") {
+      const body = await req.json();
+      const { userId } = body;
+      if (!userId) throw new Error("userId required");
+
+      const { data: authUser, error: userErr } = await supabaseAdmin.auth.admin.getUserById(userId);
+      if (userErr) throw userErr;
+      const email = authUser?.user?.email;
+      if (!email) throw new Error("User has no email");
+
+      const { data: link, error: linkErr } = await supabaseAdmin.auth.admin.generateLink({
+        type: "magiclink",
+        email,
+      });
+      if (linkErr) throw linkErr;
+
+      return new Response(JSON.stringify({
+        email,
+        token_hash: link.properties?.hashed_token,
+      }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     if (action === "connector-requests") {
       const { data, error } = await supabaseAdmin
         .from("connector_requests")

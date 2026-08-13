@@ -10,10 +10,11 @@ import {
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Lock, Users, Eye, Trash2, Shield, ArrowLeft, Zap, FileText, ArrowUpDown, ArrowUp, ArrowDown, MessageSquarePlus } from "lucide-react";
+import { Lock, Users, Eye, Trash2, Shield, ArrowLeft, Zap, FileText, ArrowUpDown, ArrowUp, ArrowDown, MessageSquarePlus, UserCog } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import { IMPERSONATION_KEY } from "@/components/ImpersonationBanner";
 
 // ── Sort utilities ──────────────────────────────────────────────
 type SortDirection = "asc" | "desc" | null;
@@ -233,6 +234,25 @@ const AdminPanel = () => {
     }
   };
 
+  const handleImpersonate = async (user: UserData) => {
+    if (!confirm(`Log in as ${user.email}? Your admin session in this tab will be replaced.`)) return;
+    try {
+      toast.loading("Starting impersonation...", { id: "impersonate" });
+      const data = await callAdmin(password, "impersonate", {}, { userId: user.id });
+      if (!data.token_hash) throw new Error("Could not create session for this user");
+      const { error } = await supabase.auth.verifyOtp({
+        token_hash: data.token_hash,
+        type: "magiclink",
+      });
+      if (error) throw error;
+      sessionStorage.setItem(IMPERSONATION_KEY, data.email);
+      toast.success(`Signed in as ${data.email}`, { id: "impersonate" });
+      window.location.href = "/dashboard";
+    } catch (err: any) {
+      toast.error(err.message, { id: "impersonate" });
+    }
+  };
+
   const handleSortUsers = (key: string) => setSortUsers((prev) => handleSortToggle(prev, key));
   const handleSortConnectors = (key: string) => setSortConnectors((prev) => handleSortToggle(prev, key));
   const handleSortImports = (key: string) => setSortImports((prev) => handleSortToggle(prev, key));
@@ -285,13 +305,18 @@ const AdminPanel = () => {
                   ` · Last active ${format(new Date(selectedUser.last_sign_in_at), "PPp")}`}
               </p>
             </div>
-            <Button
-              variant="destructive"
-              size="sm"
-              onClick={() => { setUserToDelete(selectedUser); setDeleteDialogOpen(true); }}
-            >
-              <Trash2 className="h-4 w-4 mr-2" /> Delete User
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" onClick={() => handleImpersonate(selectedUser)}>
+                <UserCog className="h-4 w-4 mr-2" /> Impersonate
+              </Button>
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={() => { setUserToDelete(selectedUser); setDeleteDialogOpen(true); }}
+              >
+                <Trash2 className="h-4 w-4 mr-2" /> Delete User
+              </Button>
+            </div>
           </div>
 
           <Tabs defaultValue="profile">
@@ -541,6 +566,14 @@ const AdminPanel = () => {
                       <div className="flex items-center justify-end gap-2">
                         <Button variant="ghost" size="sm" onClick={() => handleViewUser(user)}>
                           <Eye className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          title="Impersonate user"
+                          onClick={() => handleImpersonate(user)}
+                        >
+                          <UserCog className="h-4 w-4" />
                         </Button>
                         <Button
                           variant="ghost"
