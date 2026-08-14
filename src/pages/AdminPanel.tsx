@@ -149,6 +149,7 @@ const AdminPanel = () => {
   const [loading, setLoading] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState<UserData | null>(null);
+  const [impersonateTarget, setImpersonateTarget] = useState<UserData | null>(null);
 
   // Sort states for each table
   const [sortUsers, setSortUsers] = useState<SortConfig>({ key: "", direction: null });
