@@ -498,6 +498,23 @@ const AdminPanel = () => {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        <Dialog open={!!impersonateTarget} onOpenChange={(o) => !o && setImpersonateTarget(null)}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Impersonate User</DialogTitle>
+              <DialogDescription>
+                Log in as {impersonateTarget?.email}? Your admin session in this tab will be replaced.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setImpersonateTarget(null)}>Cancel</Button>
+              <Button onClick={confirmImpersonate}>
+                <UserCog className="h-4 w-4 mr-2" /> Impersonate
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     );
   }
@@ -661,6 +678,23 @@ const AdminPanel = () => {
           <DialogFooter>
             <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
             <Button variant="destructive" onClick={handleDeleteUser}>Delete</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!impersonateTarget} onOpenChange={(o) => !o && setImpersonateTarget(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Impersonate User</DialogTitle>
+            <DialogDescription>
+              Log in as {impersonateTarget?.email}? Your admin session in this tab will be replaced.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setImpersonateTarget(null)}>Cancel</Button>
+            <Button onClick={confirmImpersonate}>
+              <UserCog className="h-4 w-4 mr-2" /> Impersonate
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
