@@ -235,23 +235,46 @@ const AdminPanel = () => {
   };
 
   const handleImpersonate = async (user: UserData) => {
-    if (!confirm(`Log in as ${user.email}? Your admin session in this tab will be replaced.`)) return;
+    setImpersonateTarget(user);
+  };
+
+  const confirmImpersonate = async () => {
+    const user = impersonateTarget;
+    if (!user) return;
+    setImpersonateTarget(null);
     try {
       toast.loading("Starting impersonation...", { id: "impersonate" });
       const data = await callAdmin(password, "impersonate", {}, { userId: user.id });
-      if (!data.token_hash) throw new Error("Could not create session for this user");
-      const { error } = await supabase.auth.verifyOtp({
-        token_hash: data.token_hash,
-        type: "magiclink",
-      });
-      if (error) throw error;
+      if (!data.token_hash && !data.action_link) throw new Error("Could not create session for this user");
+
       sessionStorage.setItem(IMPERSONATION_KEY, data.email);
-      toast.success(`Signed in as ${data.email}`, { id: "impersonate" });
-      window.location.href = "/dashboard";
+
+      if (data.token_hash) {
+        const { error } = await supabase.auth.verifyOtp({
+          token_hash: data.token_hash,
+          type: "magiclink",
+        });
+        if (!error) {
+          toast.success(`Signed in as ${data.email}`, { id: "impersonate" });
+          window.location.href = "/dashboard";
+          return;
+        }
+        console.error("verifyOtp failed, falling back to link", error);
+      }
+
+      if (data.action_link) {
+        toast.success(`Signing in as ${data.email}...`, { id: "impersonate" });
+        window.location.href = data.action_link;
+        return;
+      }
+      throw new Error("Impersonation failed");
     } catch (err: any) {
-      toast.error(err.message, { id: "impersonate" });
+      sessionStorage.removeItem(IMPERSONATION_KEY);
+      console.error("Impersonation error", err);
+      toast.error(err.message || "Impersonation failed", { id: "impersonate" });
     }
   };
+
 
   const handleSortUsers = (key: string) => setSortUsers((prev) => handleSortToggle(prev, key));
   const handleSortConnectors = (key: string) => setSortConnectors((prev) => handleSortToggle(prev, key));
