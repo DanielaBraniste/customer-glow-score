@@ -149,6 +149,7 @@ const AdminPanel = () => {
   const [loading, setLoading] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState<UserData | null>(null);
+  const [impersonateTarget, setImpersonateTarget] = useState<UserData | null>(null);
 
   // Sort states for each table
   const [sortUsers, setSortUsers] = useState<SortConfig>({ key: "", direction: null });
@@ -235,23 +236,46 @@ const AdminPanel = () => {
   };
 
   const handleImpersonate = async (user: UserData) => {
-    if (!confirm(`Log in as ${user.email}? Your admin session in this tab will be replaced.`)) return;
+    setImpersonateTarget(user);
+  };
+
+  const confirmImpersonate = async () => {
+    const user = impersonateTarget;
+    if (!user) return;
+    setImpersonateTarget(null);
     try {
       toast.loading("Starting impersonation...", { id: "impersonate" });
       const data = await callAdmin(password, "impersonate", {}, { userId: user.id });
-      if (!data.token_hash) throw new Error("Could not create session for this user");
-      const { error } = await supabase.auth.verifyOtp({
-        token_hash: data.token_hash,
-        type: "magiclink",
-      });
-      if (error) throw error;
+      if (!data.token_hash && !data.action_link) throw new Error("Could not create session for this user");
+
       sessionStorage.setItem(IMPERSONATION_KEY, data.email);
-      toast.success(`Signed in as ${data.email}`, { id: "impersonate" });
-      window.location.href = "/dashboard";
+
+      if (data.token_hash) {
+        const { error } = await supabase.auth.verifyOtp({
+          token_hash: data.token_hash,
+          type: "magiclink",
+        });
+        if (!error) {
+          toast.success(`Signed in as ${data.email}`, { id: "impersonate" });
+          window.location.href = "/dashboard";
+          return;
+        }
+        console.error("verifyOtp failed, falling back to link", error);
+      }
+
+      if (data.action_link) {
+        toast.success(`Signing in as ${data.email}...`, { id: "impersonate" });
+        window.location.href = data.action_link;
+        return;
+      }
+      throw new Error("Impersonation failed");
     } catch (err: any) {
-      toast.error(err.message, { id: "impersonate" });
+      sessionStorage.removeItem(IMPERSONATION_KEY);
+      console.error("Impersonation error", err);
+      toast.error(err.message || "Impersonation failed", { id: "impersonate" });
     }
   };
+
 
   const handleSortUsers = (key: string) => setSortUsers((prev) => handleSortToggle(prev, key));
   const handleSortConnectors = (key: string) => setSortConnectors((prev) => handleSortToggle(prev, key));
@@ -474,6 +498,23 @@ const AdminPanel = () => {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        <Dialog open={!!impersonateTarget} onOpenChange={(o) => !o && setImpersonateTarget(null)}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Impersonate User</DialogTitle>
+              <DialogDescription>
+                Log in as {impersonateTarget?.email}? Your admin session in this tab will be replaced.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setImpersonateTarget(null)}>Cancel</Button>
+              <Button onClick={confirmImpersonate}>
+                <UserCog className="h-4 w-4 mr-2" /> Impersonate
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     );
   }
@@ -637,6 +678,23 @@ const AdminPanel = () => {
           <DialogFooter>
             <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
             <Button variant="destructive" onClick={handleDeleteUser}>Delete</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!impersonateTarget} onOpenChange={(o) => !o && setImpersonateTarget(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Impersonate User</DialogTitle>
+            <DialogDescription>
+              Log in as {impersonateTarget?.email}? Your admin session in this tab will be replaced.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setImpersonateTarget(null)}>Cancel</Button>
+            <Button onClick={confirmImpersonate}>
+              <UserCog className="h-4 w-4 mr-2" /> Impersonate
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
