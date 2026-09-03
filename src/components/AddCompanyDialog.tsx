@@ -7,7 +7,8 @@ import { Upload, Building2, Plus, X, FileSpreadsheet, ArrowLeft, ToggleLeft, Tog
 import { toast } from "sonner";
 import CSVFieldMapper from "./CSVFieldMapper";
 import { useAddCompany, useBulkAddCompanies, useCompanies } from "@/hooks/useCompanies";
-import { FREE_PLAN_LIMITS } from "@/lib/planLimits";
+import { getEffectiveLimits, formatLimit, type PlanTier } from "@/lib/planLimits";
+import { usePlan } from "@/hooks/usePlan";
 import UpgradeDialog, { UpgradeTriggerReason } from "@/components/UpgradeDialog";
 
 // Fix 3: file size limit
@@ -66,9 +67,11 @@ const AddCompanyDialog = ({ open, onOpenChange }: AddCompanyDialogProps) => {
   const addCompanyMutation = useAddCompany();
   const bulkAddMutation = useBulkAddCompanies();
   const { data: companies = [] } = useCompanies();
+  const { plan } = usePlan();
+  const limits = getEffectiveLimits(plan as PlanTier);
   const companyCount = companies.length;
-  const remainingSlots = Math.max(0, FREE_PLAN_LIMITS.maxCompanies - companyCount);
-  const atCompanyLimit = companyCount >= FREE_PLAN_LIMITS.maxCompanies;
+  const remainingSlots = Math.max(0, limits.maxCompanies - companyCount);
+  const atCompanyLimit = companyCount >= limits.maxCompanies;
 
   const [upgrade, setUpgrade] = useState<{
     open: boolean;
@@ -236,7 +239,7 @@ const AddCompanyDialog = ({ open, onOpenChange }: AddCompanyDialogProps) => {
       <DialogContent className={`bg-card border-border ${mode === "mapping" ? "sm:max-w-2xl" : "sm:max-w-lg"}`}>
         {mode !== "mapping" && (
           <div className={`text-xs rounded-md border px-3 py-2 ${atCompanyLimit ? "border-destructive/40 bg-destructive/10 text-destructive" : "border-border bg-secondary/40 text-muted-foreground"}`}>
-            <span className="font-medium text-foreground">Free plan:</span> {companyCount} / {FREE_PLAN_LIMITS.maxCompanies} companies used
+            <span className="font-medium text-foreground capitalize">{plan} plan:</span> {companyCount} / {formatLimit(limits.maxCompanies)} companies used
             {atCompanyLimit && " — limit reached"}
           </div>
         )}
@@ -516,7 +519,7 @@ const AddCompanyDialog = ({ open, onOpenChange }: AddCompanyDialogProps) => {
         reason={upgrade.reason}
         attemptedCount={upgrade.attemptedCount}
         currentCount={companyCount}
-        planLimit={FREE_PLAN_LIMITS.maxCompanies}
+        planLimit={limits.maxCompanies}
       />
     </Dialog>
   );

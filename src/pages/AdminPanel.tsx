@@ -74,6 +74,15 @@ const SortableHead = ({
 };
 
 // ── Types ───────────────────────────────────────────────────────
+interface ApiKeyData {
+  id: string;
+  name: string;
+  key_prefix: string;
+  last_used_at: string | null;
+  revoked_at: string | null;
+  created_at: string;
+}
+
 interface UserData {
   id: string;
   email: string;
@@ -103,6 +112,7 @@ interface UserData {
     completed_at: string | null;
     error_message: string | null;
   }>;
+  api_keys: ApiKeyData[];
 }
 
 const callAdmin = async (password: string, action: string, params?: Record<string, string>, body?: object) => {
@@ -348,6 +358,7 @@ const AdminPanel = () => {
               <TabsTrigger value="profile">Profile</TabsTrigger>
               <TabsTrigger value="connectors">Connectors ({selectedUser.connectors.length})</TabsTrigger>
               <TabsTrigger value="imports">Import Logs ({selectedUser.import_logs.length})</TabsTrigger>
+              <TabsTrigger value="api">API Access ({(selectedUser.api_keys || []).length})</TabsTrigger>
             </TabsList>
 
             <TabsContent value="profile">
@@ -478,6 +489,68 @@ const AdminPanel = () => {
                       </TableBody>
                     </Table>
                   )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="api">
+              <Card>
+                <CardContent className="pt-6 space-y-4">
+                  <div>
+                    <h3 className="text-sm font-semibold mb-1">Ingest API Endpoint</h3>
+                    <p className="text-xs text-muted-foreground mb-2">
+                      Customers can push usage data directly from their apps using a per-user API key.
+                    </p>
+                    <code className="block text-xs bg-secondary/60 border border-border rounded-md px-3 py-2 break-all">
+                      {`https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/ingest`}
+                    </code>
+                  </div>
+
+                  {(selectedUser.api_keys || []).length === 0 ? (
+                    <p className="text-muted-foreground text-center py-8">
+                      This user has no API keys yet. Keys are created from the Connectors page.
+                    </p>
+                  ) : (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Name</TableHead>
+                          <TableHead>Identifier</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Last Used</TableHead>
+                          <TableHead>Created</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {(selectedUser.api_keys || []).map((k) => (
+                          <TableRow key={k.id}>
+                            <TableCell className="font-medium">{k.name}</TableCell>
+                            <TableCell>
+                              <code className="text-xs bg-secondary/60 border border-border rounded px-1.5 py-0.5">
+                                {k.key_prefix}…
+                              </code>
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant={k.revoked_at ? "secondary" : "default"}>
+                                {k.revoked_at ? "Revoked" : "Active"}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-sm text-muted-foreground">
+                              {k.last_used_at ? format(new Date(k.last_used_at), "PPp") : "Never"}
+                            </TableCell>
+                            <TableCell className="text-sm text-muted-foreground">
+                              {format(new Date(k.created_at), "PPp")}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  )}
+
+                  <p className="text-[11px] text-muted-foreground">
+                    For security, full API keys are only shown once when the user creates them.
+                    The identifier (prefix) above lets you recognise a key without exposing its secret.
+                  </p>
                 </CardContent>
               </Card>
             </TabsContent>

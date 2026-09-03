@@ -37,11 +37,13 @@ Deno.serve(async (req) => {
       const { data: profiles } = await supabaseAdmin.from("profiles").select("*");
       const { data: connectors } = await supabaseAdmin.from("user_connectors").select("*");
       const { data: importLogs } = await supabaseAdmin.from("import_logs").select("*");
+      const { data: apiKeys } = await supabaseAdmin.from("api_keys").select("id,user_id,name,key_prefix,last_used_at,revoked_at,created_at");
 
       const users = authUsers.users.map((u) => {
         const profile = profiles?.find((p) => p.user_id === u.id);
         const userConnectors = connectors?.filter((c) => c.user_id === u.id) || [];
         const userImports = importLogs?.filter((l) => l.user_id === u.id) || [];
+        const userApiKeys = apiKeys?.filter((k) => k.user_id === u.id) || [];
         return {
           id: u.id,
           email: u.email,
@@ -50,6 +52,7 @@ Deno.serve(async (req) => {
           profile,
           connectors: userConnectors,
           import_logs: userImports,
+          api_keys: userApiKeys,
         };
       });
 
@@ -68,6 +71,11 @@ Deno.serve(async (req) => {
       const { data: profile } = await supabaseAdmin.from("profiles").select("*").eq("user_id", userId).maybeSingle();
       const { data: connectors } = await supabaseAdmin.from("user_connectors").select("*").eq("user_id", userId);
       const { data: importLogs } = await supabaseAdmin.from("import_logs").select("*").eq("user_id", userId);
+      const { data: apiKeys } = await supabaseAdmin
+        .from("api_keys")
+        .select("id,name,key_prefix,last_used_at,revoked_at,created_at")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false });
 
       return new Response(JSON.stringify({
         user: {
@@ -78,6 +86,7 @@ Deno.serve(async (req) => {
           profile,
           connectors: connectors || [],
           import_logs: importLogs || [],
+          api_keys: apiKeys || [],
         },
       }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
