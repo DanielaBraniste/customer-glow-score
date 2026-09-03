@@ -22,6 +22,7 @@ import FieldSelector from "@/components/connectors/FieldSelector";
 import { connectorFields } from "@/components/connectors/connectorFields";
 import { FREE_PLAN_LIMITS } from "@/lib/planLimits";
 import UpgradeDialog from "@/components/UpgradeDialog";
+import ApiAccessCard from "@/components/connectors/ApiAccessCard";
 
 const connectorDefs = [
   {
@@ -289,6 +290,8 @@ const Connectors = () => {
             {atConnectorLimit ? " — disconnect to switch to a different tool." : "."}
           </span>
         </div>
+        <ApiAccessCard />
+
         {categories.map((category) => (
           <div key={category} className="mb-10">
             <h2 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-4">{category}</h2>
