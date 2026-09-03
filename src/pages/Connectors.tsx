@@ -145,7 +145,9 @@ const Connectors = () => {
 
   const getConnectorStatus = (connectorId: string) => userConnectors.find((c) => c.connector_id === connectorId);
   const activeConnectorCount = userConnectors.filter((c) => c.is_active).length;
-  const atConnectorLimit = activeConnectorCount >= FREE_PLAN_LIMITS.maxActiveConnectors;
+  const { plan } = usePlan();
+  const limits = getEffectiveLimits(plan as PlanTier);
+  const atConnectorLimit = activeConnectorCount >= limits.maxActiveConnectors;
 
   const [upgradeOpen, setUpgradeOpen] = useState(false);
 
@@ -285,9 +287,9 @@ const Connectors = () => {
         </div>
 
         <div className={`mb-8 text-sm rounded-lg border px-4 py-3 ${atConnectorLimit ? "border-primary/30 bg-primary/5" : "border-border bg-secondary/40"}`}>
-          <span className="font-medium text-foreground">Free plan:</span>{" "}
+          <span className="font-medium text-foreground capitalize">{plan} plan:</span>{" "}
           <span className="text-muted-foreground">
-            {activeConnectorCount} / {FREE_PLAN_LIMITS.maxActiveConnectors} active connector
+            {activeConnectorCount} / {formatLimit(limits.maxActiveConnectors)} active connector
             {atConnectorLimit ? " — disconnect to switch to a different tool." : "."}
           </span>
         </div>
@@ -472,7 +474,7 @@ const Connectors = () => {
         onOpenChange={setUpgradeOpen}
         reason="connector_limit"
         currentCount={activeConnectorCount}
-        planLimit={FREE_PLAN_LIMITS.maxActiveConnectors}
+        planLimit={limits.maxActiveConnectors}
       />
     </div>
   );
