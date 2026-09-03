@@ -20,7 +20,8 @@ import stripeLogo from "@/assets/connectors/stripe.png";
 import segmentLogo from "@/assets/connectors/segment.png";
 import FieldSelector from "@/components/connectors/FieldSelector";
 import { connectorFields } from "@/components/connectors/connectorFields";
-import { FREE_PLAN_LIMITS } from "@/lib/planLimits";
+import { getEffectiveLimits, formatLimit, type PlanTier } from "@/lib/planLimits";
+import { usePlan } from "@/hooks/usePlan";
 import UpgradeDialog from "@/components/UpgradeDialog";
 import ApiAccessCard from "@/components/connectors/ApiAccessCard";
 
