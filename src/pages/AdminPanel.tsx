@@ -358,6 +358,7 @@ const AdminPanel = () => {
               <TabsTrigger value="profile">Profile</TabsTrigger>
               <TabsTrigger value="connectors">Connectors ({selectedUser.connectors.length})</TabsTrigger>
               <TabsTrigger value="imports">Import Logs ({selectedUser.import_logs.length})</TabsTrigger>
+              <TabsTrigger value="api">API Access ({(selectedUser.api_keys || []).length})</TabsTrigger>
             </TabsList>
 
             <TabsContent value="profile">
