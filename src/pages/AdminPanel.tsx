@@ -74,6 +74,15 @@ const SortableHead = ({
 };
 
 // ── Types ───────────────────────────────────────────────────────
+interface ApiKeyData {
+  id: string;
+  name: string;
+  key_prefix: string;
+  last_used_at: string | null;
+  revoked_at: string | null;
+  created_at: string;
+}
+
 interface UserData {
   id: string;
   email: string;
@@ -103,6 +112,7 @@ interface UserData {
     completed_at: string | null;
     error_message: string | null;
   }>;
+  api_keys: ApiKeyData[];
 }
 
 const callAdmin = async (password: string, action: string, params?: Record<string, string>, body?: object) => {
